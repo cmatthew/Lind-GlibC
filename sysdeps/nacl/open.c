@@ -3,10 +3,11 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <unistd.h>
-
+#include <string.h>
 #include <nacl_rpc.h>
 #include <nacl_syscalls.h>
-
+#include "strace.h"
+/*testing */ 
 
 enum
 {
@@ -15,7 +16,7 @@ enum
   RPC_DISABLED = 2,
 };
 
-static int use_rpc_cached = RPC_NOT_CACHED;
+static int use_rpc_cached = RPC_DISABLED;
 
 static int __nacl_use_rpc (void)
 {
@@ -35,7 +36,7 @@ struct open_message
   mode_t mode;
 };
 
-static const char open_method_id[4] = "Open";
+static const char open_method_id[4] = "OpeN";
 
 static int nacl_open_rpc (const char *filename, int flags, mode_t mode)
 {
@@ -84,13 +85,16 @@ static int nacl_open_rpc (const char *filename, int flags, mode_t mode)
 int __open (const char *filename, int flags, ...)
 {
   int mode = 0;
+
   if(flags & O_CREAT) {
     va_list arg;
     va_start(arg, flags);
     mode = va_arg(arg, int);
     va_end(arg);
   }
-
+  char* message = strdup(filename);
+  nacl_strace(message);
+  
   if (__nacl_use_rpc ())
     return nacl_open_rpc (filename, flags, mode);
 

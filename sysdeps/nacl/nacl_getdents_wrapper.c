@@ -19,6 +19,7 @@ __ssize_t internal_function __GETDENTS (int fd, char *buf, size_t buf_size)
      syscall. To avoid overwhelming of buf it is necessary to make nacl_buf
      smaller. It is ok to make nacl_buf_size equal buf_size * 0.9 because
      minimal size of nacl_abi_dirent is 12 bytes. */
+
   int nacl_buf_size = buf_size - buf_size / 10 - 1;
   char nacl_buf[nacl_buf_size];
   int nbytes = NACL_SYSCALL (getdents) (fd, nacl_buf, nacl_buf_size);

@@ -4,6 +4,7 @@
 
 #include <nacl_stat.h>
 #include <nacl_syscalls.h>
+#include "strace.h"
 
 int __xstat (int version, const char *path, struct stat *buf)
 {
@@ -12,6 +13,7 @@ int __xstat (int version, const char *path, struct stat *buf)
       errno = EFAULT;
       return -1;
     }
+  nacl_strace("stat");
   struct nacl_abi_stat st;
   int result = NACL_SYSCALL (stat) (path, &st);
   if (result < 0)

@@ -3,10 +3,11 @@
 #include <unistd.h>
 
 #include <nacl_syscalls.h>
-
+#include "strace.h"
 
 int __close (int fd)
 {
+  nacl_strace("close");
   int result = NACL_SYSCALL (close) (fd);
   if (result < 0) {
     errno = -result;

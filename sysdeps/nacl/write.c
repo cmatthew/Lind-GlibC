@@ -4,10 +4,12 @@
 #include <sysdep.h>
 
 #include <nacl_syscalls.h>
-
+#include "strace.h"
 
 ssize_t __write(int desc, void const *buf, size_t count)
 {
+  nacl_strace("write");
+
   int result = NACL_SYSCALL (write) (desc, buf, count);
   if (result < 0) {
     errno = -result;

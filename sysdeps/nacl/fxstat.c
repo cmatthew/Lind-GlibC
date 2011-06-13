@@ -6,6 +6,7 @@
 #include <kernel_stat.h>
 #include <nacl_stat.h>
 #include <nacl_syscalls.h>
+#include "strace.h"
 
 void __nacl_abi_stat_to_stat (struct nacl_abi_stat *nacl_st,
                                 struct stat *st)
@@ -34,6 +35,8 @@ int __fxstat (int vers, int fd, struct stat *buf)
     errno = EFAULT;
     return -1;
   }
+  nacl_strace("fstat");
+
   struct nacl_abi_stat nacl_buf;
   int result = NACL_SYSCALL (fstat) (fd, &nacl_buf);
   if (result < 0) {
