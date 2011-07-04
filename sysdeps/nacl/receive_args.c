@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <nacl_rpc.h>
+extern int lind_ready_to_log;
 
 
 /* We expect to receive an IMC message with the following format:
@@ -116,6 +117,7 @@ static int keep_plugin_happy (int socket_fd)
   };
   struct NaClImcMsgHdr send_message = { &send_iov, 1, NULL, 0, 0 };
   int sent = imc_sendmsg (socket_fd, &send_message, 0);
+ 
   if (sent < 0)
     return -1;
 
@@ -298,8 +300,10 @@ void argmsg_move_to_stack (struct process_args *args,
     fail ("Failed to munmap() startup message\n");
 }
 
+
 void jump_to_elf_start (void *buf, uintptr_t entry_func, uintptr_t atexit_func)
 {
+
   /* The ELF entry point ABI is such that assembly code is required to
      call the entry point.
      See http://code.google.com/p/nativeclient/issues/detail?id=1131

@@ -3,13 +3,14 @@
 #include <time.h>
 
 #include <nacl_syscalls.h>
-
+#include "strace.h"
 
 /* Undo the #define in include/sys/time.h */
 #undef __gettimeofday
 
 int __gettimeofday (struct timeval *tv, struct timezone *tz)
 {
+  nacl_strace("gettimeofday");
   int result = NACL_SYSCALL (gettimeofday) (tv, tz);
   if ((unsigned int) result > 0xfffff000u) {
     errno = -result;

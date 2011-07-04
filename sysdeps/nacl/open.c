@@ -4,8 +4,12 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
+
 #include <nacl_rpc.h>
 #include <nacl_syscalls.h>
+/* #include <stdio-common/_itoa.h> */
+
+
 #include "strace.h"
 /*testing */ 
 
@@ -40,6 +44,8 @@ static const char open_method_id[4] = "OpeN";
 
 static int nacl_open_rpc (const char *filename, int flags, mode_t mode)
 {
+
+  
   /* TODO(mseaborn): When we implement more POSIX-over-IPC calls, the
      marshalling will be made generic rather than open-coded. */
   struct open_message header;
@@ -82,8 +88,16 @@ static int nacl_open_rpc (const char *filename, int flags, mode_t mode)
 }
 
 
+
 int __open (const char *filename, int flags, ...)
 {
+   /* By the time we are opening files, we are ready to capture all straces. */
+  
+  /* nacl_rpc_syscall(100, "foo",10, NULL); */
+
+
+  set_ready_to_log();
+
   int mode = 0;
 
   if(flags & O_CREAT) {
@@ -92,8 +106,8 @@ int __open (const char *filename, int flags, ...)
     mode = va_arg(arg, int);
     va_end(arg);
   }
-  char* message = strdup(filename);
-  nacl_strace(message);
+  /* char* message = strdup(filename); */
+  nacl_strace("open");
   
   if (__nacl_use_rpc ())
     return nacl_open_rpc (filename, flags, mode);
