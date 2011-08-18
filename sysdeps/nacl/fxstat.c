@@ -35,8 +35,7 @@ int __fxstat (int vers, int fd, struct stat *buf)
     errno = EFAULT;
     return -1;
   }
-  nacl_strace("fstat");
-
+  nacl_strace("fxstat");
   struct nacl_abi_stat nacl_buf;
   int result = NACL_SYSCALL (fstat) (fd, &nacl_buf);
   if (result < 0) {

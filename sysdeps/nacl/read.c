@@ -5,10 +5,10 @@
 
 #include <nacl_syscalls.h>
 #include "strace.h"
-
+#include "nacl_util.h"
 ssize_t __libc_read (int fd, void *buf, size_t size)
 {
-  nacl_strace("read");
+  nacl_strace(concat("read",nacl_itoa(fd)));
   int result = NACL_SYSCALL (read) (fd, buf, size);
   if (result < 0) {
     errno = -result;

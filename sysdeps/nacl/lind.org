@@ -1,0 +1,55 @@
+* RPC System Requirements
+** bascailly rpc over message passing
+We will need to send calls, with argumetns, and take return values back.
+** synchronus by default
+** Examples
+int f = open("string", int mode, int something_else);
+
+
+* System Call interception
+** read
+** write
+** close
+** wait?
+** exit
+** kill?
+
+
+* System Calls in hello world
+*** execve
+*** brk
+*** access
+*** mmap
+*** open
+*** fstat
+*** close
+*** read
+*** mprotect
+*** arch_prctl
+*** munmap
+** TODO find out what hello world does
+   
+* Syntax of description headers
+** "ii:ii"?
+** only server side demarshaling?
+** send this in a vector
+format is <size, pointer>
+** Format
+*** message headers
+**** channel number
+for multithreading
+**** magic number
+for debugging
+**** version number
+for debugging - maybe last digits of git SHA1?
+**** run number?
+am I talking to an old server?
+
+*** message description
+**** format string size
+**** format string
+
+*** Var Args
+**** use the remaining 
+*** [magic value]
+    for checking we are correctly at the end of message.  Do not rely on this, but good debuging check.

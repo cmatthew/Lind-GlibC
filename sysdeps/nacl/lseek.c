@@ -3,10 +3,11 @@
 #include <unistd.h>
 
 #include <nacl_syscalls.h>
-
+#include "strace.h"
 
 off_t __lseek (int fd, off_t offset, int whence)
 {
+  nacl_strace("lseek");
   nacl_abi_off_t nacl_offset = offset;
   int result = NACL_SYSCALL (lseek) (fd, &nacl_offset, whence);
   if (result < 0) {

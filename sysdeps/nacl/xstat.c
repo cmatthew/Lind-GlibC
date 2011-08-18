@@ -13,7 +13,7 @@ int __xstat (int version, const char *path, struct stat *buf)
       errno = EFAULT;
       return -1;
     }
-  nacl_strace("stat");
+  nacl_strace("xstat");
   struct nacl_abi_stat st;
   int result = NACL_SYSCALL (stat) (path, &st);
   if (result < 0)

@@ -4,10 +4,11 @@
 
 #include <nacl_syscalls.h>
 #include "strace.h"
+#include "nacl_util.h"
 
 int __close (int fd)
 {
-  nacl_strace("close");
+  nacl_strace("close");   /* concat("close",nacl_itoa(fd) ) ); */
   int result = NACL_SYSCALL (close) (fd);
   if (result < 0) {
     errno = -result;
