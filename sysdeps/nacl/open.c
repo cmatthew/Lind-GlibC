@@ -87,7 +87,7 @@
 int __open (const char *filename, int flags, ...)
 {
    /* By the time we are opening files, we are ready to capture all straces. */
-  set_ready_to_log();
+  // set_ready_to_log();
 
   int mode = 0;
 
@@ -109,7 +109,7 @@ int __open (const char *filename, int flags, ...)
   nacl_strace("lind open failed, trying NaCl's");
   int result = NACL_SYSCALL (open) (filename, flags, mode);
   if (result < 0) {
-    errno = -result;
+    errno = -lind_rc;
      return -1;
   }
   nacl_strace(concat("opened as ", nacl_itoa(result)));

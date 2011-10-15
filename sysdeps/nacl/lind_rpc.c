@@ -16,11 +16,12 @@ by then.  */
 
 static int _lind_ready_to_log = 0;
 
-static char ** lind_rpc_status_messages = {"RPC OK", 
-					   "RPC Write Error", 
-					   "RPC Read Error", 
-					   "RPC Argument Error",
-                                           "RPC Protocol Error" };
+static char * lind_rpc_status_messages[] = {"RPC OK", 
+					    "RPC Write Error", 
+					    "RPC Read Error", 
+					    "RPC Argument Error",
+					    "RPC Protocol Error",
+					    NULL};
 
 
 int get_logging_status(void) {
@@ -31,16 +32,24 @@ void set_ready_to_log(void) {
   _lind_ready_to_log = 1;
 }
 
+void set_no_logging(void) {
+  _lind_ready_to_log = 0;  
+}
 
-
-void nacl_strace(const char* syscall) {
+void nacl_strace(const char* message) {
   if (get_logging_status()) { 
-      char * message = strdup(syscall); 
-      char * format = nacl_itoa(strlen(message));
-      format = concat(format, "s");
-      int returncode;
-      unsafe_nacl_rpc_syscall(NACL_STRACE_SYSCALL, format, strlen(message) + 1, message, &returncode );
-      free(message); 
+    lind_request request;
+    static lind_reply reply;
+    memset(&request, 0, sizeof(lind_request));
+    
+    request.message.body = strdup(message);
+    request.message.len = strlen(message) + 1;
+    request.format = nacl_itoa(strlen(message));
+    request.format = concat(request.format, "s");
+    request.call_number = NACL_STRACE_SYSCALL;
+      
+    unsafe_nacl_rpc_syscall(&request, &reply);
+    
   }    
 }
 
@@ -58,28 +67,63 @@ struct nacl_rpc_syscall {
 };
 
 
-static void nacl_rpc_setup_header(struct nacl_rpc_syscall * current_call, unsigned int call_number, const char * format) {
+static void nacl_rpc_setup_header(struct nacl_rpc_syscall * current_call, lind_request * request) {
   
   /* Something signed that we can verify we are getting the correct stuff on the other side */
   const int magic = -2;
 
-  int format_num_chars = strlen(format);
+  int format_num_chars = strlen(request->format);
 
   memset( (void*) current_call, 0, sizeof(struct nacl_rpc_syscall));
 
   current_call->magic_number = magic;
-  current_call->syscall_number = call_number;
+  current_call->syscall_number = request->call_number;
   current_call->format_string_len = format_num_chars;
-  current_call->validation_number = magic + call_number + format_num_chars;
+  current_call->validation_number = magic + request->call_number + format_num_chars;
 
 }
 
 
-lind_rpc_status nacl_rpc_syscall(unsigned int call_number, const char* format, unsigned int len, void* body, int * retval) {
+lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char* format, unsigned int len, void* body, int * retval) {
 
   lind_rpc_status rc;
   
-  rc = unsafe_nacl_rpc_syscall(call_number, format, len, body, retval);
+  lind_request request;
+  lind_reply reply;
+
+  memset(&request, 0, sizeof(request));
+  memset(&reply, 0, sizeof(reply));
+
+  request.call_number = call_number;
+  request.format = (char*)format;
+  request.message.len = len;
+  request.message.body = body;
+
+
+  rc = unsafe_nacl_rpc_syscall(&request, &reply);
+  
+  if ( rc == RPC_OK ) {
+    if (reply.is_error) {
+      reply.return_code *= -1;
+    }
+
+    *retval = reply.return_code;
+    return rc;
+  } else if (rc > RPC_OK && rc <= RPC_ARGS_ERROR) {
+    nacl_strace(concat("RPC Failed with: ", lind_rpc_status_messages[rc]));
+  } else {
+    nacl_strace("Invalid RPC return state. This should never happen!");
+  }
+  return rc;
+
+}
+
+
+lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * reply) {
+
+  lind_rpc_status rc;
+  
+  rc = unsafe_nacl_rpc_syscall(request, reply);
   
   if ( rc == RPC_OK ) {
     return rc;
@@ -88,32 +132,35 @@ lind_rpc_status nacl_rpc_syscall(unsigned int call_number, const char* format, u
   } else {
     nacl_strace("Invalid RPC return state. This should never happen!");
   }
-  
+  return rc;
 
 }
 
-lind_rpc_status unsafe_nacl_rpc_syscall(unsigned int call_number, const char* format, unsigned int len, void* body, int * retval) {
+/** Make a rpc system call, but without printing error status after.
+    See nacl_rpc_syscall_proxy for safe wrapper!
+
+*/
+lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply) {
 
   /* Construct a message such that first part is a message header,
      then the syscall specific data.  */
-  int iov_len;
-  iov_len = (body == NULL)?2:3;
+  int iov_len = (request->message.body == NULL)?2:3;
   struct NaClImcMsgIoVec iov[iov_len];
   memset(iov, 0, sizeof(iov));
   struct nacl_rpc_syscall current_call;
-  nacl_rpc_setup_header(&current_call, call_number, format);
-  /* current_call.payload = NULL; */
+
+  nacl_rpc_setup_header(&current_call, request);
   
   iov[0].base =  &current_call;
   iov[0].length = sizeof( struct nacl_rpc_syscall );
   
 
-  iov[1].base = (void*) format;
-  iov[1].length = strlen(format);
+  iov[1].base = (void*) request->format;
+  iov[1].length = strlen(request->format);
  
   if (iov_len == 3) {
-    iov[2].base = body;
-    iov[2].length = len;
+    iov[2].base = request->message.body;
+    iov[2].length = request->message.len;
   }
   struct NaClImcMsgHdr request_msg;
   memset(&request_msg, 0, sizeof(struct NaClImcMsgHdr));
@@ -121,21 +168,23 @@ lind_rpc_status unsafe_nacl_rpc_syscall(unsigned int call_number, const char* fo
   request_msg.iov_length = iov_len;
   request_msg.descv = NULL;
   request_msg.desc_length = 0;
+
   int write_rc = 0;
   if ( (write_rc = imc_sendmsg (NACL_PLUGIN_ASYNC_FROM_CHILD_FD, &request_msg, 0)) < 1) {
     return RPC_WRITE_ERROR;
   }
-  const int buf_siz = 1024;
-  int buf[buf_siz];
-  memset(&buf, 0, buf_siz*sizeof(int));
+
+  
+  memset(reply, 0, sizeof(lind_reply));
+
   int rc = -1;
   struct NaClImcMsgIoVec reply_iov;
   memset(&reply_iov, 0, sizeof(struct NaClImcMsgIoVec));
   struct NaClImcMsgHdr reply_msg;
   memset(&reply_msg, 0, sizeof(struct NaClImcMsgHdr));
   
-  reply_iov.base = (void *) &buf;
-  reply_iov.length = buf_siz * sizeof(int);
+  reply_iov.base = (void *)reply;
+  reply_iov.length = sizeof(struct lind_rpc_reply);
   reply_msg.iov = &reply_iov;
   reply_msg.iov_length = 1;
   reply_msg.descv = &rc;
@@ -145,18 +194,18 @@ lind_rpc_status unsafe_nacl_rpc_syscall(unsigned int call_number, const char* fo
   if (imc_recvmsg (NACL_PLUGIN_ASYNC_TO_CHILD_FD, &reply_msg, 0 ) < 1) {
     return RPC_READ_ERROR;
   }
-  int * size =  &buf[0];
-  int * magic =  &buf[1];
-  int * is_error = &buf[2];
-  int error = (-1)*(*is_error);
-  *retval = error * buf[3];
+
+  /*  "<i<i<i<iNs", len(self.message) + 12, 101010, 1, return_code, message
+ */
+
   
+  if (reply->magic_number != MAGIC) {
+     return RPC_PROTOCOL_ERROR;
+   }
+
 
   return RPC_OK;
 
-  /* if (*magic != 101010) { */
-  /*   return RPC_PROTOCOL_ERROR; */
-  /* } */
 
   /* void * response_buffer = malloc(*size); */
   /* memset(response_buffer, 0, *size); */

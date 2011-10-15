@@ -13,6 +13,8 @@ char * nacl_itoa(int);
  op and arg are left untouched. Oparg is allocated by a 
  calloc call.  */
 char * concat(const char* op, const char * arg);
-  
 
+
+/* Is this file handle a system handle, or a Lind handle? */
+int is_system_handle(int fd);  
 #endif // NUTIL_H

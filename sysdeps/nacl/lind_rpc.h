@@ -1,9 +1,40 @@
-
+#ifndef _lind_rpc_h_
+#define _lind_rpc_h_
 
 typedef enum lind_rpc_status_e {RPC_OK = 0, RPC_WRITE_ERROR, RPC_READ_ERROR, RPC_ARGS_ERROR, RPC_PROTOCOL_ERROR} lind_rpc_status;
 
 
-lind_rpc_status nacl_rpc_syscall(unsigned int, const char*, unsigned int, void*, int *);
+#define MAGIC 101010
+#define buf_siz 1024
+
+struct lind_message {
+  unsigned int len;		/* size of the message in bytes */
+  void * body;			/* location of the body of the message */
+};
+
+typedef struct lind_rpc_request {
+  unsigned int call_number;
+  char * format;
+  struct lind_message message;
+} lind_request;
+
+typedef struct lind_rpc_reply {
+  int message_size; 		/* size of the total reply message including feilds */
+  int magic_number;		/* number to make sure we are really getting a reply */
+  int is_error;			/* did the call end in error or with a success? */
+  int return_code;		/* if error, the errno, if success, the return value */
+  char contents[buf_siz - sizeof(int) * 4]; /* data payload */
+} lind_reply;
+
+#define CONTENTS_SIZ(x) (x.message_size - sizeof(int)*4)
+
+lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, 
+					    const char* format, 
+					    unsigned int len, 
+					    void* body, 
+					    int * retval);
+
+lind_rpc_status nacl_rpc_syscall_proxy(lind_request *, lind_reply *);
 
 
 /**
@@ -11,4 +42,6 @@ lind_rpc_status nacl_rpc_syscall(unsigned int, const char*, unsigned int, void*,
    logging (since that requires a syscall itself).  Error are printed using the
    strace logging interface.  
 */
-lind_rpc_status unsafe_nacl_rpc_syscall(unsigned int, const char*, unsigned int, void*, int *);
+lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply);
+
+#endif // _lind_rpc_h_
