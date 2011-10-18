@@ -6,7 +6,7 @@
 
 #include <nacl_rpc.h>
 #include <nacl_syscalls.h>
-
+#include <stdarg.h>
 #include "strace.h"
 #include "nacl_util.h"
 #include "lind_rpc.h"
@@ -14,7 +14,7 @@
  So wait until the first file is opened, we are safe
 by then.  */
 
-static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply);
+static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply, int nargs, va_list ertra_args);
 
 
 
@@ -40,8 +40,11 @@ void set_no_logging(void) {
   _lind_ready_to_log = 0;  
 }
 
-void nacl_strace(const char* message) {
+void nacl_strace(const char* message, ...) {
+  /* Var args dont work */
   if (get_logging_status()) { 
+    va_list args;
+    va_start(args, message);
     lind_request request;
     static lind_reply reply;
     memset(&request, 0, sizeof(lind_request));
@@ -52,7 +55,8 @@ void nacl_strace(const char* message) {
     request.format = concat(request.format, "s");
     request.call_number = NACL_STRACE_SYSCALL;
       
-    unsafe_nacl_rpc_syscall(&request, &reply);
+    unsafe_nacl_rpc_syscall(&request, &reply, 0, args);
+    va_end(args);
     
   }    
 }
@@ -88,13 +92,13 @@ static void nacl_rpc_setup_header(struct nacl_rpc_syscall * current_call, lind_r
 }
 
 
-lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char* format, unsigned int len, void* body, int * retval) {
+lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char* format, unsigned int len, void* body, int * retval, int nargs, ...) {
 
   lind_rpc_status rc;
-  
+  va_list args;
   lind_request request;
   lind_reply reply;
-
+  va_start(args, nargs);
   memset(&request, 0, sizeof(request));
   memset(&reply, 0, sizeof(reply));
 
@@ -104,13 +108,13 @@ lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char
   request.message.body = body;
 
 
-  rc = unsafe_nacl_rpc_syscall(&request, &reply);
+  rc = unsafe_nacl_rpc_syscall(&request, &reply, nargs, args);
   
   if ( rc == RPC_OK ) {
     if (reply.is_error) {
       reply.return_code *= -1;
     }
-
+    va_end(args);
     *retval = reply.return_code;
     return rc;
   } else if (rc > RPC_OK && rc <= RPC_ARGS_ERROR) {
@@ -118,24 +122,28 @@ lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char
   } else {
     nacl_strace("Invalid RPC return state. This should never happen!");
   }
+  va_end(args);
   return rc;
 
 }
 
 
-lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * reply) {
+lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * reply, int nargs, ...) {
 
   lind_rpc_status rc;
-  
-  rc = unsafe_nacl_rpc_syscall(request, reply);
+  va_list argp;
+  va_start(argp, nargs);
+  rc = unsafe_nacl_rpc_syscall(request, reply, nargs, argp);
   
   if ( rc == RPC_OK ) {
+    va_end(argp);
     return rc;
   } else if (rc > RPC_OK && rc <= RPC_ARGS_ERROR) {
     nacl_strace(concat("RPC Failed with: ", lind_rpc_status_messages[rc]));
   } else {
     nacl_strace("Invalid RPC return state. This should never happen!");
   }
+  va_end(argp);
   return rc;
 
 }
@@ -144,17 +152,22 @@ lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * repl
     See nacl_rpc_syscall_proxy for safe wrapper!
 
 */
-static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply) {
+static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply, int nargs, va_list extra_args) {
 
   /* Construct a message such that first part is a message header,
      then the syscall specific data.  */
   int iov_len = (request->message.body == NULL)?2:3;
+  iov_len += nargs;
   struct NaClImcMsgIoVec iov[iov_len];
   memset(iov, 0, sizeof(iov));
   struct nacl_rpc_syscall current_call;
-
   nacl_rpc_setup_header(&current_call, request);
-  
+  int i;
+  for (i = 0; i < nargs; i++) {
+    iov[3+i].base = va_arg(extra_args, void *);
+    iov[3+i].length = va_arg(extra_args, int);
+  }
+
   iov[0].base =  &current_call;
   iov[0].length = sizeof( struct nacl_rpc_syscall );
   

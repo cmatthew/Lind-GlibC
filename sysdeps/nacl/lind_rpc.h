@@ -32,9 +32,9 @@ lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number,
 					    const char* format, 
 					    unsigned int len, 
 					    void* body, 
-					    int * retval);
+					    int * retval, int nargs, ...);
 
-lind_rpc_status nacl_rpc_syscall_proxy(lind_request *, lind_reply *);
+lind_rpc_status nacl_rpc_syscall_proxy(lind_request *, lind_reply *, int nargs, ...);
 
 
 /**

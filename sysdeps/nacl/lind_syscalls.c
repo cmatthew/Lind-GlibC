@@ -17,7 +17,7 @@ struct lind_open_rpc_s {
   char filename[MAX_FILENAME_LENGTH];
 };
 
-struct lind_read_rpc_s {
+struct lind_rw_rpc_s {
   int handle;
   int size;
 };
@@ -45,7 +45,7 @@ int lind_open_rpc (const char * filename, int flags, int mode) {
   nacl_strace( concat("MessageLen: ", nacl_itoa(req.message.len) ) );
   req.message.body = &args;
   
-  nacl_rpc_syscall_proxy(&req, &rep);
+  nacl_rpc_syscall_proxy(&req, &rep, 0);
   // make the error code negative.
   fd = rep.return_code * ((rep.is_error)?-1:1);
 
@@ -60,8 +60,8 @@ int lind_read_rpc(int handle, int size, void * where_to) {
   memset(&req, 0, sizeof(req));
   lind_reply rep;
   memset(&rep, 0, sizeof(req));
-  struct lind_read_rpc_s args;
-  memset(&args, 0, sizeof(struct lind_read_rpc_s));
+  struct lind_rw_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_rw_rpc_s));
 
   int return_code = -1;
   args.handle = handle;
@@ -70,11 +70,11 @@ int lind_read_rpc(int handle, int size, void * where_to) {
   req.call_number = NACL_sys_read;
   req.format = "<i<i";
 
-  req.message.len = sizeof(struct lind_read_rpc_s);
+  req.message.len = sizeof(struct lind_rw_rpc_s);
   req.message.body = &args;
  
 
-  nacl_rpc_syscall_proxy(&req, &rep);
+  nacl_rpc_syscall_proxy(&req, &rep, 0);
   // make the error code negative.
   return_code = rep.return_code * ((rep.is_error)?-1:1);
   if (return_code > 0) {
@@ -110,7 +110,7 @@ int lind_fstat_rpc(int fd, struct statfs *buf) {
   req.message.len = sizeof(struct lind_fd_rpc_s);
   req.message.body = &args;
  
-  nacl_rpc_syscall_proxy(&req, &rep);
+  nacl_rpc_syscall_proxy(&req, &rep, 0);
   // make the error code negative.
   return_code = rep.return_code * ((rep.is_error)?-1:1);
   if (return_code > 0) {
@@ -138,11 +138,41 @@ int lind_close_rpc(int fd) {
   req.message.len = sizeof(struct lind_fd_rpc_s);
   req.message.body = &args;
  
-  nacl_rpc_syscall_proxy(&req, &rep);
+  nacl_rpc_syscall_proxy(&req, &rep, 0);
   // make the error code negative.
   return_code = rep.return_code * ((rep.is_error)?-1:1);
   
   return return_code;
 
 }
+
+/* ssize_t lind_write_rpc(int desc, void const *buf, size_t count) { */
+/*   lind_request req; */
+/*   memset(&req, 0, sizeof(req)); */
+/*   lind_reply rep; */
+/*   memset(&rep, 0, sizeof(req)); */
+/*   struct lind_rw_rpc_s args; */
+/*   memset(&args, 0, sizeof(struct lind_rw_rpc_s)); */
+
+/*   int return_code = -1; */
+/*   args.handle = desc; */
+/*   args.size = count; */
+
+/*   req.call_number = NACL_sys_write; */
+/*   req.format = "<i<I"; */
+
+/*   req.message.len = sizeof(struct lind_rw_rpc_s); */
+/*   req.message.body = &args; */
+
+
+/*   nacl_rpc_syscall_proxy(&req, &rep, 0); */
+/*   // make the error code negative. */
+/*   return_code = rep.return_code * ((rep.is_error)?-1:1); */
+/*   if (return_code > 0) { */
+/*     memcpy( where_to, rep.contents, return_code); */
+/*   } */
+  
+/*   return return_code; */
+
+/* } */
 
