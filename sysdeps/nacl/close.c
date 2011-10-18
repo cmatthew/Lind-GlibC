@@ -9,7 +9,12 @@
 int __close (int fd)
 {
   nacl_strace("close");   /* concat("close",nacl_itoa(fd) ) ); */
-  int result = NACL_SYSCALL (close) (fd);
+  int result;
+  if (is_system_handle(fd)) {
+  result = NACL_SYSCALL (close) (fd);
+  } else {
+    result = lind_close_rpc(fd);
+  }
   if (result < 0) {
     errno = -result;
     return -1;
