@@ -14,6 +14,10 @@
  So wait until the first file is opened, we are safe
 by then.  */
 
+static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply);
+
+
+
 static int _lind_ready_to_log = 0;
 
 static char * lind_rpc_status_messages[] = {"RPC OK", 
@@ -140,7 +144,7 @@ lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * repl
     See nacl_rpc_syscall_proxy for safe wrapper!
 
 */
-lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply) {
+static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply) {
 
   /* Construct a message such that first part is a message header,
      then the syscall specific data.  */
@@ -156,7 +160,7 @@ lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * rep
   
 
   iov[1].base = (void*) request->format;
-  iov[1].length = strlen(request->format);
+  iov[1].length = strlen(request->format)+1;
  
   if (iov_len == 3) {
     iov[2].base = request->message.body;

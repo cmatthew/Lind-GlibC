@@ -87,7 +87,7 @@
 int __open (const char *filename, int flags, ...)
 {
    /* By the time we are opening files, we are ready to capture all straces. */
-  // set_ready_to_log();
+  /* set_ready_to_log(); */
 
   int mode = 0;
 

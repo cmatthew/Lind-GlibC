@@ -42,6 +42,6 @@ lind_rpc_status nacl_rpc_syscall_proxy(lind_request *, lind_reply *);
    logging (since that requires a syscall itself).  Error are printed using the
    strace logging interface.  
 */
-lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply);
+/* lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply); */
 
 #endif // _lind_rpc_h_
