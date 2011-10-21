@@ -4,13 +4,20 @@
 #include <sysdep.h>
 
 #include <nacl_syscalls.h>
+#include "lind_syscalls.h"
 #include "strace.h"
+
 
 ssize_t __write(int desc, void const *buf, size_t count)
 {
-  nacl_strace("write");
+  nacl_strace( concat("write of ",nacl_itoa(desc)) );
 
-  int result = NACL_SYSCALL (write) (desc, buf, count);
+  int result;
+  if (is_system_handle(desc)) {
+    result = NACL_SYSCALL (write) (desc, buf, count);
+  } else {
+    result = lind_write_rpc(desc, buf, count); 
+  }
   if (result < 0) {
     errno = -result;
     return -1;

@@ -146,33 +146,24 @@ int lind_close_rpc(int fd) {
 
 }
 
-/* ssize_t lind_write_rpc(int desc, void const *buf, size_t count) { */
-/*   lind_request req; */
-/*   memset(&req, 0, sizeof(req)); */
-/*   lind_reply rep; */
-/*   memset(&rep, 0, sizeof(req)); */
-/*   struct lind_rw_rpc_s args; */
-/*   memset(&args, 0, sizeof(struct lind_rw_rpc_s)); */
+ssize_t lind_write_rpc(int desc, void const *buf, size_t count) {
+  lind_request req;
+  memset(&req, 0, sizeof(req));
+  lind_reply rep;
+  memset(&rep, 0, sizeof(req));
+  struct lind_rw_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_rw_rpc_s));
+  int return_code = -1;
+  args.handle = desc;
+  args.size = count;
+  req.call_number = NACL_sys_write;
+  req.format = concat(concat("<i<I", nacl_itoa(count-1)),"s"); 
+  req.message.len = sizeof(struct lind_rw_rpc_s);
+  req.message.body = &args;
+  nacl_rpc_syscall_proxy(&req, &rep, 1, buf, count);
+  // make the error code negative.
+  return_code = rep.return_code * ((rep.is_error)?-1:1);
 
-/*   int return_code = -1; */
-/*   args.handle = desc; */
-/*   args.size = count; */
-
-/*   req.call_number = NACL_sys_write; */
-/*   req.format = "<i<I"; */
-
-/*   req.message.len = sizeof(struct lind_rw_rpc_s); */
-/*   req.message.body = &args; */
-
-
-/*   nacl_rpc_syscall_proxy(&req, &rep, 0); */
-/*   // make the error code negative. */
-/*   return_code = rep.return_code * ((rep.is_error)?-1:1); */
-/*   if (return_code > 0) { */
-/*     memcpy( where_to, rep.contents, return_code); */
-/*   } */
-  
-/*   return return_code; */
-
-/* } */
+  return return_code;
+}
 
