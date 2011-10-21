@@ -175,7 +175,7 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   iov[1].base = (void*) request->format;
   iov[1].length = strlen(request->format)+1;
  
-  if (iov_len == 3) {
+  if (request->message.body != NULL) {
     iov[2].base = request->message.body;
     iov[2].length = request->message.len;
   }
