@@ -8,7 +8,6 @@
 
 int __close (int fd)
 {
-  nacl_strace("close");   /* concat("close",nacl_itoa(fd) ) ); */
   int result;
   if (is_system_handle(fd)) {
   result = NACL_SYSCALL (close) (fd);
