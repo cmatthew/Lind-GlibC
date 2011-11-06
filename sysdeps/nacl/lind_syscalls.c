@@ -23,11 +23,19 @@ struct lind_rw_rpc_s {
 };
 
 
+struct lind_lseek_rpc_s {
+  int fd;
+  int whence;
+  off_t offset;
+};
+
+
+
 int lind_open_rpc (const char * filename, int flags, int mode) {
   lind_request req;
   memset(&req, 0, sizeof(req));
   lind_reply rep;
-  memset(&rep, 0, sizeof(req));
+  memset(&rep, 0, sizeof(rep));
   struct lind_open_rpc_s args;
   memset(&args, 0, sizeof(struct lind_open_rpc_s));
 
@@ -59,7 +67,7 @@ int lind_read_rpc(int handle, int size, void * where_to) {
   lind_request req;
   memset(&req, 0, sizeof(req));
   lind_reply rep;
-  memset(&rep, 0, sizeof(req));
+  memset(&rep, 0, sizeof(rep));
   struct lind_rw_rpc_s args;
   memset(&args, 0, sizeof(struct lind_rw_rpc_s));
 
@@ -97,7 +105,7 @@ int lind_fstat_rpc(int fd, struct statfs *buf) {
   lind_request req;
   memset(&req, 0, sizeof(req));
   lind_reply rep;
-  memset(&rep, 0, sizeof(req));
+  memset(&rep, 0, sizeof(rep));
   struct lind_fd_rpc_s args;
   memset(&args, 0, sizeof(struct lind_fd_rpc_s));
 
@@ -121,11 +129,52 @@ int lind_fstat_rpc(int fd, struct statfs *buf) {
 
 }
 
+
+
+/* lseek system call.   Has three arguments (int fd, off_t offset, int whence)
+ * returns a off_t (__SQUAD_TYPE) which is a 64 bit signed type. */
+int lind_lseek_rpc(int fd, off_t offset, int whence) {
+
+  lind_request req;
+  memset(&req, 0, sizeof(req));
+
+  lind_reply rep;
+  memset(&rep, 0, sizeof(rep));
+
+  struct lind_lseek_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_lseek_rpc_s));
+
+  int return_code = -1;
+  args.fd = fd;
+  args.offset = offset;
+  args.whence = whence;
+
+  req.call_number = NACL_sys_lseek;
+  /* int fd, int whence, long (as string) */
+  req.format = "<i<i7s";
+
+  req.message.len = sizeof( struct lind_lseek_rpc_s );
+  req.message.body = &args;
+ 
+  nacl_rpc_syscall_proxy(&req, &rep, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (rep.is_error) {
+    return_code = rep.return_code * -1;
+  } else {
+    return_code = rep.return_code;
+  }
+  
+  return return_code;
+
+}
+
+
 int lind_close_rpc(int fd) {
   lind_request req;
   memset(&req, 0, sizeof(req));
   lind_reply rep;
-  memset(&rep, 0, sizeof(req));
+  memset(&rep, 0, sizeof(rep));
   struct lind_fd_rpc_s args;
   memset(&args, 0, sizeof(struct lind_fd_rpc_s));
 
@@ -150,7 +199,7 @@ ssize_t lind_write_rpc(int desc, void const *buf, size_t count) {
   lind_request req;
   memset(&req, 0, sizeof(req));
   lind_reply rep;
-  memset(&rep, 0, sizeof(req));
+  memset(&rep, 0, sizeof(rep));
   struct lind_rw_rpc_s args;
   memset(&args, 0, sizeof(struct lind_rw_rpc_s));
   int return_code = -1;
