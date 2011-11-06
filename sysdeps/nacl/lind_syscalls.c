@@ -32,42 +32,46 @@ struct lind_lseek_rpc_s {
 
 
 int lind_open_rpc (const char * filename, int flags, int mode) {
-  lind_request req;
-  memset(&req, 0, sizeof(req));
-  lind_reply rep;
-  memset(&rep, 0, sizeof(rep));
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
   struct lind_open_rpc_s args;
   memset(&args, 0, sizeof(struct lind_open_rpc_s));
 
-
-  int fd = -1;
+  int return_code = -1;
   args.flags = flags;
   args.mode = mode;
   args.filename_len = strlen(filename);
   strncpy(&(args.filename[0]), filename, MAX_FILENAME_LENGTH - 1);
 
-  req.call_number = NACL_sys_open;
-  req.format = "<i<i<i511s";
+  request.call_number = NACL_sys_open;
+  request.format = "<i<i<i511s";
   
-  req.message.len = sizeof(struct lind_open_rpc_s);
-  nacl_strace( concat("MessageLen: ", nacl_itoa(req.message.len) ) );
-  req.message.body = &args;
+  request.message.len = sizeof(struct lind_open_rpc_s);
+  request.message.body = &args;
   
-  nacl_rpc_syscall_proxy(&req, &rep, 0);
-  // make the error code negative.
-  fd = rep.return_code * ((rep.is_error)?-1:1);
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
 
-  return fd;
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+
+
+  return return_code;
 
 }
 
 
 int lind_read_rpc(int handle, int size, void * where_to) {
 
-  lind_request req;
-  memset(&req, 0, sizeof(req));
-  lind_reply rep;
-  memset(&rep, 0, sizeof(rep));
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
   struct lind_rw_rpc_s args;
   memset(&args, 0, sizeof(struct lind_rw_rpc_s));
 
@@ -75,20 +79,23 @@ int lind_read_rpc(int handle, int size, void * where_to) {
   args.handle = handle;
   args.size = size;
 
-  req.call_number = NACL_sys_read;
-  req.format = "<i<i";
+  request.call_number = NACL_sys_read;
+  request.format = "<i<i";
 
-  req.message.len = sizeof(struct lind_rw_rpc_s);
-  req.message.body = &args;
+  request.message.len = sizeof(struct lind_rw_rpc_s);
+  request.message.body = &args;
  
 
-  nacl_rpc_syscall_proxy(&req, &rep, 0);
-  // make the error code negative.
-  return_code = rep.return_code * ((rep.is_error)?-1:1);
-  if (return_code > 0) {
-    memcpy( where_to, rep.contents, return_code);
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+    memcpy( where_to, reply.contents, return_code);
   }
-  
+
   return return_code;
 
 }
@@ -102,29 +109,32 @@ struct lind_fd_rpc_s {
 
 int lind_fstat_rpc(int fd, struct statfs *buf) {
 
-  lind_request req;
-  memset(&req, 0, sizeof(req));
-  lind_reply rep;
-  memset(&rep, 0, sizeof(rep));
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
   struct lind_fd_rpc_s args;
   memset(&args, 0, sizeof(struct lind_fd_rpc_s));
 
   int return_code = -1;
   args.fd = fd;
 
-  req.call_number = NACL_sys_fstat;
-  req.format = "<i";
+  request.call_number = NACL_sys_fstat;
+  request.format = "<i";
 
-  req.message.len = sizeof(struct lind_fd_rpc_s);
-  req.message.body = &args;
+  request.message.len = sizeof(struct lind_fd_rpc_s);
+  request.message.body = &args;
  
-  nacl_rpc_syscall_proxy(&req, &rep, 0);
-  // make the error code negative.
-  return_code = rep.return_code * ((rep.is_error)?-1:1);
-  if (return_code > 0) {
-    memcpy(buf, rep.contents, sizeof(struct statfs));
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+    memcpy(buf, reply.contents, sizeof(struct statfs));
   }
-  
+
   return return_code;
 
 }
@@ -135,11 +145,11 @@ int lind_fstat_rpc(int fd, struct statfs *buf) {
  * returns a off_t (__SQUAD_TYPE) which is a 64 bit signed type. */
 int lind_lseek_rpc(int fd, off_t offset, int whence) {
 
-  lind_request req;
-  memset(&req, 0, sizeof(req));
+  lind_request request;
+  memset(&request, 0, sizeof(request));
 
-  lind_reply rep;
-  memset(&rep, 0, sizeof(rep));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
 
   struct lind_lseek_rpc_s args;
   memset(&args, 0, sizeof(struct lind_lseek_rpc_s));
@@ -149,20 +159,20 @@ int lind_lseek_rpc(int fd, off_t offset, int whence) {
   args.offset = offset;
   args.whence = whence;
 
-  req.call_number = NACL_sys_lseek;
+  request.call_number = NACL_sys_lseek;
   /* int fd, int whence, long (as string) */
-  req.format = "<i<i7s";
+  request.format = "<i<i7s";
 
-  req.message.len = sizeof( struct lind_lseek_rpc_s );
-  req.message.body = &args;
+  request.message.len = sizeof( struct lind_lseek_rpc_s );
+  request.message.body = &args;
  
-  nacl_rpc_syscall_proxy(&req, &rep, 0);
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
 
   /* on error return negative so we can set ERRNO. */  
-  if (rep.is_error) {
-    return_code = rep.return_code * -1;
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
   } else {
-    return_code = rep.return_code;
+    return_code = reply.return_code;
   }
   
   return return_code;
@@ -171,47 +181,58 @@ int lind_lseek_rpc(int fd, off_t offset, int whence) {
 
 
 int lind_close_rpc(int fd) {
-  lind_request req;
-  memset(&req, 0, sizeof(req));
-  lind_reply rep;
-  memset(&rep, 0, sizeof(rep));
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
   struct lind_fd_rpc_s args;
   memset(&args, 0, sizeof(struct lind_fd_rpc_s));
 
   int return_code = -1;
   args.fd = fd;
 
-  req.call_number = NACL_sys_close;
-  req.format = "<i";
+  request.call_number = NACL_sys_close;
+  request.format = "<i";
 
-  req.message.len = sizeof(struct lind_fd_rpc_s);
-  req.message.body = &args;
+  request.message.len = sizeof(struct lind_fd_rpc_s);
+  request.message.body = &args;
  
-  nacl_rpc_syscall_proxy(&req, &rep, 0);
-  // make the error code negative.
-  return_code = rep.return_code * ((rep.is_error)?-1:1);
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
   
   return return_code;
 
 }
 
 ssize_t lind_write_rpc(int desc, void const *buf, size_t count) {
-  lind_request req;
-  memset(&req, 0, sizeof(req));
-  lind_reply rep;
-  memset(&rep, 0, sizeof(rep));
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
   struct lind_rw_rpc_s args;
   memset(&args, 0, sizeof(struct lind_rw_rpc_s));
   int return_code = -1;
   args.handle = desc;
   args.size = count;
-  req.call_number = NACL_sys_write;
-  req.format = concat(concat("<i<I", nacl_itoa(count-1)),"s"); 
-  req.message.len = sizeof(struct lind_rw_rpc_s);
-  req.message.body = &args;
-  nacl_rpc_syscall_proxy(&req, &rep, 1, buf, count);
-  // make the error code negative.
-  return_code = rep.return_code * ((rep.is_error)?-1:1);
+  request.call_number = NACL_sys_write;
+  request.format = concat(concat("<i<I", nacl_itoa(count-1)),"s"); 
+  request.message.len = sizeof(struct lind_rw_rpc_s);
+  request.message.body = &args;
+  nacl_rpc_syscall_proxy(&request, &reply, 1, buf, count);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+
 
   return return_code;
 }
