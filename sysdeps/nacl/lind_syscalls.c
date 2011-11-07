@@ -237,3 +237,47 @@ ssize_t lind_write_rpc(int desc, void const *buf, size_t count) {
   return return_code;
 }
 
+#define FMT_INT "<i"
+#define FMT_UINT "<I"
+#define FMT_LONG "<i"
+#define FMT_ULONG "<I"
+
+
+struct lind_ioctl_rpc_s {
+  int fd;
+  unsigned long int request;
+};
+
+
+
+int lind_ioctl_rpc (int fd, unsigned long int ioctl_request, ...) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+  struct lind_ioctl_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_ioctl_rpc_s));
+
+  int return_code = -1;
+  args.fd = fd;
+  args.request = ioctl_request;
+
+  request.call_number = NACL_sys_ioctl;
+  request.format = FMT_INT FMT_ULONG;
+
+  request.message.len = sizeof(struct lind_ioctl_rpc_s);
+  request.message.body = &args;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+
+}
