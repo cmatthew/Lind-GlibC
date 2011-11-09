@@ -29,7 +29,7 @@
  */
 
 #define NACL_sys_null                    1
-
+#define NACL_sys_access                  2
 #define NACL_sys_open                   10
 #define NACL_sys_close                  11
 #define NACL_sys_read                   12

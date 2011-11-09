@@ -1,5 +1,6 @@
 #include <sys/statfs.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lind_rpc.h"
@@ -241,7 +242,7 @@ ssize_t lind_write_rpc(int desc, void const *buf, size_t count) {
 #define FMT_UINT "<I"
 #define FMT_LONG "<i"
 #define FMT_ULONG "<I"
-
+#define FMT_STR(len) #len "s"
 
 struct lind_ioctl_rpc_s {
   int fd;
@@ -270,6 +271,57 @@ int lind_ioctl_rpc (int fd, unsigned long int ioctl_request, ...) {
   request.message.body = &args;
  
   nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+
+}
+
+
+struct lind_access_rpc_s {
+  int type;
+};
+
+
+
+/** Send access call to RePy via lind RPC.  file is the name of the file to chcek
+ type is the access mode ( W_OK, R_OK, X_OK or an | of them). */
+int lind_access_rpc (const char * file, int type) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+  struct lind_access_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_access_rpc_s));
+
+  int return_code = -1;
+  args.type = type;
+  request.call_number = NACL_sys_access;
+
+
+  /* Now build the format string which is <iLENGTHs */
+  size_t file_name_length = strlen(file);
+  size_t file_name_size = file_name_length + 1; /* size in bytes */
+  const char * str_len = nacl_itoa(file_name_length);
+  const char * str_len_s = concat(str_len,"s");
+  request.format = concat(FMT_INT, str_len_s);
+  free( (void*) str_len);
+  free( (void*) str_len_s);
+
+  request.message.len = sizeof( struct lind_access_rpc_s );
+  request.message.body = &args;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 1, file, file_name_size);
+
+  /* concat malloced this earlier. */
+  free( (void*)request.format );
 
   /* on error return negative so we can set ERRNO. */  
   if (reply.is_error) {
