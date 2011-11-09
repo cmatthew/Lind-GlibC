@@ -6,6 +6,7 @@
 #include <nacl_syscalls.h>
 #include "lind_syscalls.h"
 #include "strace.h"
+#include "nacl_util.h"
 
 
 ssize_t __write(int desc, void const *buf, size_t count)
