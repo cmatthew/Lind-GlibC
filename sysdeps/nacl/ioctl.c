@@ -40,7 +40,6 @@ __ioctl (int fd, unsigned long int request, ...)
   }
   return 0;
 
-
 }
 
 weak_alias (__ioctl, ioctl)
