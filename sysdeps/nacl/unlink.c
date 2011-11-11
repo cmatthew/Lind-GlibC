@@ -8,7 +8,6 @@
 /* Remove the link named NAME.  */
 int
 __unlink (const char * name)  {
-  nacl_strace("hello");
   nacl_strace(concat("unlink ",name));
  
   nacl_strace(name);
