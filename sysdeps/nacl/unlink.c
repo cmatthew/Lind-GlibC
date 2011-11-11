@@ -9,8 +9,6 @@
 int
 __unlink (const char * name)  {
   nacl_strace(concat("unlink ",name));
- 
-  nacl_strace(name);
   if (name == NULL)
     {
       __set_errno (EINVAL);
