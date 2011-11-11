@@ -11,6 +11,13 @@
 
 #define MAX_FILENAME_LENGTH 512
 
+#define FMT_INT "<i"
+#define FMT_UINT "<I"
+#define FMT_LONG "<i"
+#define FMT_ULONG "<I"
+#define FMT_STR(len) #len "s"
+
+
 struct lind_open_rpc_s {
   int flags;
   int mode;
@@ -238,11 +245,6 @@ ssize_t lind_write_rpc(int desc, void const *buf, size_t count) {
   return return_code;
 }
 
-#define FMT_INT "<i"
-#define FMT_UINT "<I"
-#define FMT_LONG "<i"
-#define FMT_ULONG "<I"
-#define FMT_STR(len) #len "s"
 
 struct lind_ioctl_rpc_s {
   int fd;
@@ -322,6 +324,89 @@ int lind_access_rpc (const char * file, int type) {
 
   /* concat malloced this earlier. */
   free( (void*)request.format );
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+
+}
+
+
+/** Send unlink call to RePy via lind RPC.  Name is a path */
+int lind_unlink_rpc (const char * name) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+  
+  int return_code = -1;
+  request.call_number = NACL_sys_unlink;
+
+  /* Now build the format string which is LENGTHs */
+  size_t file_name_length = strlen(name);
+  size_t file_name_size = file_name_length + 1; /* size in bytes */
+  const char * str_len = nacl_itoa(file_name_length);
+  const char * str_len_s = combine(2, str_len, "s"); 
+  request.format = str_len_s;
+
+  request.message.len = 0;
+  request.message.body = NULL;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 1, name, file_name_size);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+
+}
+
+
+/** Send link call to RePy via lind RPC.  old name and new name are file paths*/
+int lind_link_rpc (const char * from, const char * to) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+  
+  int return_code = -1;
+  
+  request.call_number = NACL_sys_link;
+
+  /* Now build the format string which is LENGTHsLENGTHs */
+  size_t from_length = strlen(from);
+  size_t from_size = from_length + 1; /* size in bytes */
+  const char * str_len = nacl_itoa(from_length);
+
+  size_t to_length = strlen(to);
+  size_t to_size = to_length + 1; /* size in bytes */
+  const char * new_str_len = nacl_itoa(to_length);
+
+
+  request.format = combine(4, str_len, "s", new_str_len, "s");
+  /* free( (void*) str_len); */
+  /* free( (void*) str_len_s); */
+  /* free( (void*) new_str_len_s); */
+  /* free( (void*) new_str_len); */
+
+  request.message.len = 0;
+  request.message.body = NULL;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 2, from, from_size, to, to_size);
+
+  /* concat malloced this earlier. */
+  /* free( (void*)request.format ); */
 
   /* on error return negative so we can set ERRNO. */  
   if (reply.is_error) {

@@ -5,20 +5,19 @@
 #include "nacl_util.h"
 #include "lind_syscalls.h"
 
-/* Test for access to FILE.  */
+
+/* Make a link to FROM called TO.  */
 int
-__access (const char* file, int type)
-{
-  if (file == NULL || (type & ~(R_OK|W_OK|X_OK|F_OK)) != 0)
+__link (const char * from, const char * to) {
+  nacl_strace(concat("link ",from));
+
+  if (from == NULL || to == NULL)
     {
       __set_errno (EINVAL);
       return -1;
     }
-
-  nacl_strace(concat("access ",file));
-
   /* since everything is okay, forward to lind server. */
-  int return_code = lind_access_rpc(file, type);
+  int return_code = lind_link_rpc(from, to);
 
   if (return_code < 0) {
     __set_errno ( -1 * return_code);
@@ -26,8 +25,9 @@ __access (const char* file, int type)
   } else {
     return return_code;
   }
-}
-stub_warning (access)
 
-weak_alias (__access, access)
+}
+stub_warning (link)
+
+weak_alias (__link, link)
 #include <stub-tag.h>

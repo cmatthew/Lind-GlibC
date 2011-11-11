@@ -1,7 +1,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-
+#include <stdarg.h>
+#ifdef TESTING
+#include <stdio.h>
+#endif
 /* Get the string representation of integer. 
  * Caller must free memory.  */
 char* nacl_itoa(int integer)
@@ -36,6 +39,7 @@ char* nacl_itoa(int integer)
   return result;
 }  
   
+#ifdef TESTING
 
 static int __attribute ((unused)) test_itoa() {
   assert(strcmp("1", nacl_itoa(1)) == 0 );
@@ -50,16 +54,38 @@ static int __attribute ((unused)) test_itoa() {
  
   return 0;
 }
-  
 
+#endif
+  
 
 char * concat(const char* op, const char * arg) {
   int len = 0;
   len = strlen(op);
-  len += strlen(arg) + 2;
+  len += strlen(arg) + 1;
   char * msg = calloc(1,len);
   strcat(msg, op);
   strcat(msg, arg);
+  return msg;
+}
+
+char * combine(unsigned int num_strs, ...) {
+  va_list argp;
+  va_start(argp, num_strs);
+  int len = 0;
+  int i = 0;
+  for (i; i<num_strs; i++) {
+    char* str = va_arg(argp, char*);
+    len += strlen(str);
+  }
+  va_end(argp);
+  va_start(argp,num_strs);
+
+  char * msg = (char*) malloc(len+1);
+  memset(msg, 0, len + 1);
+  for (i = 0; i < num_strs; i++) {
+    strcat(msg, va_arg(argp, char*));
+  }
+  va_end(argp);
   return msg;
 }
 
@@ -73,3 +99,23 @@ int is_system_handle(int fd) {
   }
 
 }
+
+#ifdef TESTING
+
+static int __attribute ((unused)) test_combine() {
+  assert(strcmp("ab",combine(2, "a", "b") ) == 0 );
+  assert(strcmp("a",combine(1, "a") ) == 0 );
+  assert(strcmp("abc",combine(3, "a", "b", "c") ) == 0 );
+  assert(strcmp("assbasscassdass",combine(4, "ass", "bass", "cass","dass") ) == 0 );
+  return 0;
+}
+
+
+int main() {
+  test_combine();
+  test_itoa();
+}
+
+#endif
+
+

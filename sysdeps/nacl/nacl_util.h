@@ -12,7 +12,8 @@ char * nacl_itoa(int);
 /* Combine "op" and "arg" into a new larger string "oparg"
  op and arg are left untouched. Oparg is allocated by a 
  calloc call.  */
-char * concat(const char* op, const char * arg);
+char * concat(const char * op, const char * arg);
+char * combine(unsigned int num, ...);
 
 
 /* Is this file handle a system handle, or a Lind handle? */

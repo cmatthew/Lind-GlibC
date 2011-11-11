@@ -8,4 +8,6 @@ int lind_close_rpc(int fd);
 ssize_t lind_write_rpc(int desc, void const *buf, size_t count);
 int lind_ioctl_rpc (int fd, unsigned long int request, ...);
 int lind_access_rpc(const char * file, int type);
+int lind_unlink_rpc(const char * name);
+int lind_link_rpc(const char * from, const char * to);
 
