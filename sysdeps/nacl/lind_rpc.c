@@ -74,7 +74,7 @@ struct nacl_rpc_syscall {
   int validation_number;
 };
 
-
+/* check then populate header information for syscall struct. */
 static void nacl_rpc_setup_header(struct nacl_rpc_syscall * current_call, lind_request * request) {
   
   /* Something signed that we can verify we are getting the correct stuff on the other side */
@@ -87,7 +87,7 @@ static void nacl_rpc_setup_header(struct nacl_rpc_syscall * current_call, lind_r
   current_call->magic_number = magic;
   current_call->syscall_number = request->call_number;
   current_call->format_string_len = format_num_chars;
-  current_call->validation_number = magic + request->call_number + format_num_chars;
+  current_call->validation_number = magic + request->call_number + format_num_chars; /* simple checksum style validation of message */
 
 }
 
@@ -128,6 +128,8 @@ lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char
 }
 
 
+/* make a syscall, but do is safely. If there is a problem report an error message. 
+ */
 lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * reply, int nargs, ...) {
 
   lind_rpc_status rc;
@@ -148,7 +150,8 @@ lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * repl
 
 }
 
-/** Make a rpc system call, but without printing error status after.
+/** Make a rpc system call, but without printing error status after.  Use this for things like trace
+    which has to work, or from places where printing an error wont work.
     See nacl_rpc_syscall_proxy for safe wrapper!
 
 */
@@ -156,33 +159,43 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
 
   /* Construct a message such that first part is a message header,
      then the syscall specific data.  */
-  int iov_len = (request->message.body == NULL)?2:3;
-  iov_len += nargs;
+  int iov_len = (request->message.body == NULL)?2:3; /* is there a payload in this message? */
+  iov_len += nargs; 
+  int iov_pos = 0; 		/* increment through, header, format, body1, then each nargs elements */
   struct NaClImcMsgIoVec iov[iov_len];
   memset(iov, 0, sizeof(iov));
   struct nacl_rpc_syscall current_call;
-  nacl_rpc_setup_header(&current_call, request);
+  nacl_rpc_setup_header(&current_call, request); 
+
+  /* add header */
+  iov[iov_pos].base =  &current_call;
+  iov[iov_pos].length = sizeof( struct nacl_rpc_syscall );
+  iov_pos += 1;
+
+  /* add format string */
+  iov[iov_pos].base = (void*) request->format;
+  iov[iov_pos].length = strlen(request->format)+1;
+  iov_pos += 1;
+
+  /* if message has body add it */
+  if (request->message.body != NULL) {
+    iov[iov_pos].base = request->message.body;
+    iov[iov_pos].length = request->message.len;
+    iov_pos += 1;
+  }
+
+  /* add in each of the var args pointers */
   int i;
   for (i = 0; i < nargs; i++) {
-    iov[3+i].base = va_arg(extra_args, void *);
-    iov[3+i].length = va_arg(extra_args, int);
+    iov[iov_pos].base = va_arg(extra_args, void *);
+    iov[iov_pos].length = va_arg(extra_args, int);
+    iov_pos += 1;
   }
-
-  iov[0].base =  &current_call;
-  iov[0].length = sizeof( struct nacl_rpc_syscall );
-  
-
-  iov[1].base = (void*) request->format;
-  iov[1].length = strlen(request->format)+1;
  
-  if (request->message.body != NULL) {
-    iov[2].base = request->message.body;
-    iov[2].length = request->message.len;
-  }
   struct NaClImcMsgHdr request_msg;
   memset(&request_msg, 0, sizeof(struct NaClImcMsgHdr));
   request_msg.iov = iov;
-  request_msg.iov_length = iov_len;
+  request_msg.iov_length = iov_len; 
   request_msg.descv = NULL;
   request_msg.desc_length = 0;
 
@@ -190,8 +203,8 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   if ( (write_rc = imc_sendmsg (NACL_PLUGIN_ASYNC_FROM_CHILD_FD, &request_msg, 0)) < 1) {
     return RPC_WRITE_ERROR;
   }
-
   
+  /* now lets get the reply */
   memset(reply, 0, sizeof(lind_reply));
 
   int rc = -1;
@@ -200,7 +213,7 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   struct NaClImcMsgHdr reply_msg;
   memset(&reply_msg, 0, sizeof(struct NaClImcMsgHdr));
   
-  reply_iov.base = (void *)reply;
+  reply_iov.base = (void *) reply;
   reply_iov.length = sizeof(struct lind_rpc_reply);
   reply_msg.iov = &reply_iov;
   reply_msg.iov_length = 1;
@@ -211,43 +224,11 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   if (imc_recvmsg (NACL_PLUGIN_ASYNC_TO_CHILD_FD, &reply_msg, 0 ) < 1) {
     return RPC_READ_ERROR;
   }
-
-  /*  "<i<i<i<iNs", len(self.message) + 12, 101010, 1, return_code, message
- */
-
   
   if (reply->magic_number != MAGIC) {
      return RPC_PROTOCOL_ERROR;
-   }
-
+  }
 
   return RPC_OK;
-
-
-  /* void * response_buffer = malloc(*size); */
-  /* memset(response_buffer, 0, *size); */
-  /* int response_rc = -1; */
-  /* struct NaClImcMsgIoVec response_iov; */
-  /* memset(&response_iov, 0, sizeof(struct NaClImcMsgIoVec)); */
-  /* struct NaClImcMsgHdr response_msg; */
-  /* memset(&response_msg, 0, sizeof(struct NaClImcMsgHdr)); */
-  
-  /* response_iov.base = (void *) &response_buffer; */
-  /* response_iov.length = sizeof(response_buffer); */
-  /* response_msg.iov = &response_iov; */
-  /* response_msg.iov_length = 1; */
-  /* response_msg.descv = &response_rc; */
-  /* response_msg.desc_length = 1; */
-  /* response_msg.flags = 0; */
-
-
-  /* if (imc_recvmsg (NACL_PLUGIN_ASYNC_TO_CHILD_FD, &response_msg, *size ) < 1) { */
-  /*   return RPC_READ_ERROR; */
-  /* } */
-
-  /* *retval = *((int*)response_buffer); */
-
-  /* return RPC_OK; */
-
 }
 
