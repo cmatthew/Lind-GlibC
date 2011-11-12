@@ -8,13 +8,12 @@
 /* Remove the link named NAME.  */
 int
 __unlink (const char * name)  {
-  nacl_strace(concat("unlink ",name));
   if (name == NULL)
     {
       __set_errno (EINVAL);
       return -1;
     }
-
+  nacl_strace(concat("unlink ",name));
   /* since everything is okay, forward to lind server. */
   int return_code = lind_unlink_rpc(name);
 
