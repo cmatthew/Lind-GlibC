@@ -32,6 +32,7 @@
 #define NACL_sys_access                  2
 #define NACL_sys_unlink                  4
 #define NACL_sys_link                    5
+#define NACL_sys_chdir                   6
 #define NACL_sys_open                   10
 #define NACL_sys_close                  11
 #define NACL_sys_read                   12

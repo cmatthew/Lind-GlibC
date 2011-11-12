@@ -10,4 +10,5 @@ int lind_ioctl_rpc (int fd, unsigned long int request, ...);
 int lind_access_rpc(const char * file, int type);
 int lind_unlink_rpc(const char * name);
 int lind_link_rpc(const char * from, const char * to);
+int lind_chdir_rpc(const char * name);
 

@@ -418,3 +418,39 @@ int lind_link_rpc (const char * from, const char * to) {
   return return_code;
 
 }
+
+
+/** Send chdir call to RePy via lind RPC.  Name is a path */
+int lind_chdir_rpc (const char * name) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+
+  int return_code = -1;
+  request.call_number = NACL_sys_chdir;
+
+  /* Now build the format string which is LENGTHs */
+  size_t file_name_length = strlen(name);
+  size_t file_name_size = file_name_length + 1; /* size in bytes */
+  const char * str_len = nacl_itoa(file_name_length);
+  const char * str_len_s = combine(2, str_len, "s"); 
+  request.format = str_len_s;
+
+  request.message.len = 0;
+  request.message.body = NULL;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 1, name, file_name_size);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+
+}
+
