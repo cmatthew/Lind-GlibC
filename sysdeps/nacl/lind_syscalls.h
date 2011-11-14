@@ -11,4 +11,7 @@ int lind_access_rpc(const char * file, int type);
 int lind_unlink_rpc(const char * name);
 int lind_link_rpc(const char * from, const char * to);
 int lind_chdir_rpc(const char * name);
+int lind_mkdir_rpc (const char* path, mode_t mode);
+int lind_rmdir_rpc (const char* path);
+
 

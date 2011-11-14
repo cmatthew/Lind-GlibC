@@ -27,7 +27,5 @@ __access (const char* file, int type)
     return return_code;
   }
 }
-stub_warning (access)
 
 weak_alias (__access, access)
-#include <stub-tag.h>

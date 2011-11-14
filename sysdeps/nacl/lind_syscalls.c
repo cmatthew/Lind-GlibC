@@ -454,3 +454,82 @@ int lind_chdir_rpc (const char * name) {
 
 }
 
+struct lind_mkdir_rpc_s {
+  mode_t mode;
+};
+
+
+/** Send mkdir call to RePy via lind RPC.  Path is a path */
+int lind_mkdir_rpc (const char * path, mode_t mode) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+
+  struct lind_mkdir_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_mkdir_rpc_s));
+
+
+  int return_code = -1;
+  request.call_number = NACL_sys_mkdir;
+  
+  args.mode = mode;
+
+  /* Now build the format string which is LENGTHs */
+  size_t file_path_length = strlen(path);
+  size_t file_path_size = file_path_length + 1; /* size in bytes */
+  const char * str_len = nacl_itoa(file_path_length);
+  const char * str_len_s = combine(3, FMT_INT, str_len, "s"); 
+  request.format = str_len_s;
+
+  request.message.len = sizeof(args);
+  request.message.body = &args;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 1, path, file_path_size);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+}
+
+
+/** Send rmdir call to RePy via lind RPC.  Path is a path */
+int lind_rmdir_rpc (const char * path) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+  
+  int return_code = -1;
+  request.call_number = NACL_sys_rmdir;
+
+  /* Now build the format string which is LENGTHs */
+  size_t file_path_length = strlen(path);
+  size_t file_path_size = file_path_length + 1; /* size in bytes */
+  const char * str_len = nacl_itoa(file_path_length);
+  const char * str_len_s = combine(2, str_len, "s"); 
+  request.format = str_len_s;
+
+  request.message.len = 0;
+  request.message.body = NULL;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 1, path, file_path_size);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+
+}
+
