@@ -20,7 +20,7 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
 
 static int _lind_ready_to_log = 0;
 
-static char * lind_rpc_status_messages[] = {"RPC OK", 
+static const char * lind_rpc_status_messages[] = {"RPC OK", 
 					    "RPC Write Error", 
 					    "RPC Read Error", 
 					    "RPC Argument Error",
@@ -32,15 +32,18 @@ int get_logging_status(void) {
   return _lind_ready_to_log;
 }
 
+
 void set_ready_to_log(void) {
   _lind_ready_to_log = 1;
 }
+
 
 void set_no_logging(void) {
   _lind_ready_to_log = 0;  
 }
 
-void nacl_strace(const char* message, ...) {
+
+void __nacl_strace(const char* message, ...) {
   /* Var args dont work */
   if (get_logging_status()) { 
     va_list args;
@@ -53,11 +56,10 @@ void nacl_strace(const char* message, ...) {
     request.message.len = strlen(message) + 1;
     request.format = nacl_itoa(strlen(message));
     request.format = concat(request.format, "s");
-    request.call_number = NACL_STRACE_SYSCALL;
+    request.call_number = NACL_sys_trace;
       
-    unsafe_nacl_rpc_syscall(&request, &reply, 0, args);
+    unsafe_nacl_rpc_syscall(&request, &reply, 0, args);  /* we do unsafe because we could not do much if this fails */
     va_end(args);
-    
   }    
 }
 

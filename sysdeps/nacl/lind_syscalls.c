@@ -1,4 +1,3 @@
-#include <sys/statfs.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +7,12 @@
 #include "strace.h"
 #include "nacl_util.h"
 #include "nacl_syscalls.h"
+
+#include <kernel_stat.h>
+#include <nacl_stat.h>
+#include <sys/statfs.h>
+#include <sys/stat.h>
+
 
 #define MAX_FILENAME_LENGTH 512
 
@@ -115,7 +120,7 @@ struct lind_fd_rpc_s {
 
 
 
-int lind_fstat_rpc(int fd, struct statfs *buf) {
+int lind_fstat_rpc(int fd, struct stat *buf) {
 
   lind_request request;
   memset(&request, 0, sizeof(request));
@@ -140,7 +145,7 @@ int lind_fstat_rpc(int fd, struct statfs *buf) {
     return_code = reply.return_code * -1;
   } else {
     return_code = reply.return_code;
-    memcpy(buf, reply.contents, sizeof(struct statfs));
+    memcpy(buf, reply.contents, sizeof(struct stat));
   }
 
   return return_code;
@@ -521,6 +526,35 @@ int lind_rmdir_rpc (const char * path) {
   request.message.body = NULL;
  
   nacl_rpc_syscall_proxy(&request, &reply, 1, path, file_path_size);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+
+}
+
+
+/** Send noop call to RePy via lind RPC.  Path is a path */
+int lind_noop_rpc (void) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+  
+  int return_code = -1;
+  request.call_number = NACL_sys_null;
+  request.format = (char*) "";
+
+  request.message.len = 0;
+  request.message.body = NULL;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
 
   /* on error return negative so we can set ERRNO. */  
   if (reply.is_error) {

@@ -7,14 +7,16 @@ int get_logging_status(void);
 
 void set_ready_to_log(void);
 
+// #define USE_TRACE
+void _nacl_strace(const char* syscall);
 
-void nacl_strace(const char* syscall, ...);
+#ifdef USE_TRACE
+#define nacl_strace(x) _nacl_strace(x)
+#else
+#define nacl_strace(x) 
+#endif
 
-
-void set_no_logging(void);
-
-
-#define NACL_STRACE_SYSCALL 1
+void set_no_logging(void); 
 
 
 #endif // STRACE_H

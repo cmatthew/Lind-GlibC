@@ -73,7 +73,7 @@ char * combine(unsigned int num_strs, ...) {
   va_start(argp, num_strs);
   int len = 0;
   int i = 0;
-  for (i; i<num_strs; i++) {
+  for (; i<num_strs; i++) {
     char* str = va_arg(argp, char*);
     len += strlen(str);
   }

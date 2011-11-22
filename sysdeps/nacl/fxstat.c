@@ -8,6 +8,8 @@
 #include <nacl_syscalls.h>
 #include "strace.h"
 #include <errno.h>
+#include <nacl_stat.h>
+
 #include <sys/statfs.h>
 #include <stddef.h>
 

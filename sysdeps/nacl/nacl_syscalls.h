@@ -30,6 +30,7 @@
 
 #define NACL_sys_null                    1
 #define NACL_sys_access                  2
+#define NACL_sys_trace                   3
 #define NACL_sys_unlink                  4
 #define NACL_sys_link                    5
 #define NACL_sys_chdir                   6

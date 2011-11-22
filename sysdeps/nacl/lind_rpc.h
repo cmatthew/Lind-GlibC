@@ -14,7 +14,7 @@ struct lind_message {
 
 typedef struct lind_rpc_request {
   unsigned int call_number;
-  char * format;
+  const char * format;
   struct lind_message message;
 } lind_request;
 
