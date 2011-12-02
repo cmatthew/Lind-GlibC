@@ -3,6 +3,7 @@
 #include <nacl_stat.h>
 #include <sys/statfs.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 
 
@@ -20,5 +21,10 @@ int lind_chdir_rpc(const char * name);
 int lind_mkdir_rpc (const char* path, mode_t mode);
 int lind_rmdir_rpc (const char* path);
 int lind_noop_rpc (void);
+int lind_getpid_rpc(pid_t * pid_buf );
+int lind_xstat_rpc (int version, const char *path, struct stat *buf);
+ssize_t lind_getdents_rpc(int fd, char *buf, size_t nbytes, off_t *basep);
+int lind_comp_rpc(int request, int nbytes, void *buf);
+
 
 

@@ -1,6 +1,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
 
 #include "lind_rpc.h"
 #include "lind_syscalls.h"
@@ -26,8 +28,7 @@
 struct lind_open_rpc_s {
   int flags;
   int mode;
-  int filename_len;
-  char filename[MAX_FILENAME_LENGTH];
+  size_t filename_len;
 };
 
 struct lind_rw_rpc_s {
@@ -43,28 +44,36 @@ struct lind_lseek_rpc_s {
 };
 
 
-
+/** Send an open request to the lind server.
+ filename is the string path to the file to open*/
 int lind_open_rpc (const char * filename, int flags, int mode) {
+
   lind_request request;
   memset(&request, 0, sizeof(request));
+
   lind_reply reply;
   memset(&reply, 0, sizeof(reply));
+
   struct lind_open_rpc_s args;
   memset(&args, 0, sizeof(struct lind_open_rpc_s));
-
+  
+  /* setup arguments */
   int return_code = -1;
   args.flags = flags;
   args.mode = mode;
-  args.filename_len = strlen(filename);
-  strncpy(&(args.filename[0]), filename, MAX_FILENAME_LENGTH - 1);
-
+  size_t filename_len = strlen(filename);
+  args.filename_len = filename_len;
+  size_t filename_siz = filename_len + 1; 
+ 
+  const char * filename_len_str = nacl_itoa(args.filename_len);
+  /* <i<i<i(STRLEN)s */
+  request.format = combine(5, FMT_INT, FMT_INT, FMT_INT, filename_len_str, "s");
   request.call_number = NACL_sys_open;
-  request.format = "<i<i<i511s";
-  
+
   request.message.len = sizeof(struct lind_open_rpc_s);
   request.message.body = &args;
   
-  nacl_rpc_syscall_proxy(&request, &reply, 0);
+  nacl_rpc_syscall_proxy(&request, &reply, 1, filename, filename_siz);
 
   /* on error return negative so we can set ERRNO. */  
   if (reply.is_error) {
@@ -567,3 +576,162 @@ int lind_noop_rpc (void) {
 
 }
 
+
+/** Send getpid call to RePy via lind RPC.  Path is a path */
+int lind_getpid_rpc (pid_t* buffer) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+  
+  int return_code = -1;
+  request.call_number = NACL_sys_getpid;
+  request.format = (char*) "";
+
+  request.message.len = 0;
+  request.message.body = NULL;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+    memcpy(buffer, reply.contents, sizeof(pid_t));
+  }
+  
+  return return_code;
+
+}
+
+struct lind_xstat_rpc_s {
+  int version;
+};
+
+
+int lind_xstat_rpc (int version, const char *path, struct stat *buf) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+
+  struct lind_xstat_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_xstat_rpc_s));
+  
+  /* setup arguments */
+  int return_code = -1;
+  args.version = version;
+  size_t path_len = strlen(path);
+  size_t path_siz = path_len + 1; 
+ 
+  const char * path_len_str = nacl_itoa(path_len);
+  /* <i(STRLEN)s */
+  request.format = combine(3, FMT_INT, path_len_str, "s");
+  request.call_number = NACL_sys_xstat;
+
+  request.message.len = sizeof(struct lind_xstat_rpc_s);
+  request.message.body = &args;
+  
+  nacl_rpc_syscall_proxy(&request, &reply, 1, path, path_siz);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+    memcpy(buf, reply.contents, CONTENTS_SIZ(reply));
+  }
+
+  return return_code;
+}
+
+
+struct lind_getdents_rpc_s {
+  int fd;
+  size_t nbytes;
+};
+
+/** For now we exclude basep.
+ */
+ssize_t lind_getdents_rpc (int fd, char *buf, size_t nbytes, off_t *basep) {
+
+ lind_request request;
+  memset(&request, 0, sizeof(request));
+
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+
+  struct lind_getdents_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_getdents_rpc_s));
+  
+  /* setup arguments */
+  int return_code = -1;
+  args.fd = fd;
+  args.nbytes = nbytes;
+ 
+  /* <i(STRLEN)s */
+  request.format = FMT_INT FMT_LONG;
+  request.call_number = NACL_sys_getdents;
+
+  request.message.len = sizeof(struct lind_getdents_rpc_s);
+  request.message.body = &args;
+  
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+    memcpy(buf, reply.contents, CONTENTS_SIZ(reply));
+  }
+
+  return return_code;
+
+}
+
+
+struct lind_comp_cia_rpc_s {
+  int comp;
+  int mailbox;
+};
+
+
+int lind_comp_rpc(int request_num, int nbytes, void *buf) {
+  int return_code = -1;
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+
+  if (request_num == 4001) {
+
+    /* <i<i */
+    request.format = FMT_INT FMT_INT;
+    request.call_number = NACL_sys_comp_cia;
+
+    request.message.len = nbytes;
+    request.message.body = buf;
+  
+    nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+    /* on error return negative so we can set ERRNO. */  
+    if (reply.is_error) {
+      return_code = reply.return_code * -1;
+    } else {
+      return_code = reply.return_code;
+      memcpy(buf, reply.contents, CONTENTS_SIZ(reply));
+    }
+
+  }
+
+  return return_code;
+
+
+}
