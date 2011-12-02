@@ -43,11 +43,8 @@ void set_no_logging(void) {
 }
 
 
-void __nacl_strace(const char* message, ...) {
-  /* Var args dont work */
+void _nacl_strace(const char* message) {
   if (get_logging_status()) { 
-    va_list args;
-    va_start(args, message);
     lind_request request;
     static lind_reply reply;
     memset(&request, 0, sizeof(lind_request));
@@ -58,8 +55,7 @@ void __nacl_strace(const char* message, ...) {
     request.format = concat(request.format, "s");
     request.call_number = NACL_sys_trace;
       
-    unsafe_nacl_rpc_syscall(&request, &reply, 0, args);  /* we do unsafe because we could not do much if this fails */
-    va_end(args);
+    unsafe_nacl_rpc_syscall(&request, &reply, 0, NULL);  /* we do unsafe because we could not do much if this fails */
   }    
 }
 
@@ -120,9 +116,9 @@ lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char
     *retval = reply.return_code;
     return rc;
   } else if (rc > RPC_OK && rc <= RPC_ARGS_ERROR) {
-    nacl_strace(concat("RPC Failed with: ", lind_rpc_status_messages[rc]));
+    _nacl_strace(concat("RPC Failed with: ", lind_rpc_status_messages[rc]));
   } else {
-    nacl_strace("Invalid RPC return state. This should never happen!");
+    _nacl_strace("Invalid RPC return state. This should never happen!");
   }
   va_end(args);
   return rc;
