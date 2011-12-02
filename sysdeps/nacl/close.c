@@ -1,10 +1,10 @@
-
 #include <errno.h>
 #include <unistd.h>
 
 #include <nacl_syscalls.h>
 #include "strace.h"
 #include "nacl_util.h"
+#include "lind_syscalls.h"
 
 int __close (int fd)
 {
