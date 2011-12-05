@@ -4,19 +4,20 @@
 
 int get_logging_status(void);
 
-
 void set_ready_to_log(void);
 
-// #define USE_TRACE
-void _nacl_strace(const char* syscall);
+void set_no_logging(void); 
+void _lind_strace(const char* syscall);
+
+
+#define USE_TRACE 1 
 
 #ifdef USE_TRACE
-#define nacl_strace(x) _nacl_strace(x)
+#define nacl_strace(x) _lind_strace(x)
 #else
 #define nacl_strace(x) 
 #endif
 
-void set_no_logging(void); 
-
+#define print_error(x) _lind_strace(x)
 
 #endif // STRACE_H
