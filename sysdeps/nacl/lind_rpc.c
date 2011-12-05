@@ -43,7 +43,7 @@ void set_no_logging(void) {
 }
 
 
-void _nacl_strace(const char* message) {
+void _lind_strace(const char* message) {
   if (get_logging_status()) { 
     lind_request request;
     static lind_reply reply;
@@ -90,6 +90,9 @@ static void nacl_rpc_setup_header(struct nacl_rpc_syscall * current_call, lind_r
 }
 
 
+/**  This function used to be used for system calls. Now it is not, but trace still uses it, so we keep it here.
+
+ */
 lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char* format, unsigned int len, void* body, int * retval, int nargs, ...) {
 
   lind_rpc_status rc;
@@ -116,9 +119,9 @@ lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char
     *retval = reply.return_code;
     return rc;
   } else if (rc > RPC_OK && rc <= RPC_ARGS_ERROR) {
-    _nacl_strace(concat("RPC Failed with: ", lind_rpc_status_messages[rc]));
+    print_error(concat("RPC Failed with: ", lind_rpc_status_messages[rc]));
   } else {
-    _nacl_strace("Invalid RPC return state. This should never happen!");
+    print_error("Invalid RPC return state. This should never happen!");
   }
   va_end(args);
   return rc;
@@ -139,9 +142,9 @@ lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * repl
     va_end(argp);
     return rc;
   } else if (rc > RPC_OK && rc <= RPC_ARGS_ERROR) {
-    nacl_strace(concat("RPC Failed with: ", lind_rpc_status_messages[rc]));
+    print_error(concat("RPC Failed with: ", lind_rpc_status_messages[rc]));
   } else {
-    nacl_strace("Invalid RPC return state. This should never happen!");
+    print_error("Invalid RPC return state. This should never happen!");
   }
   va_end(argp);
   return rc;
