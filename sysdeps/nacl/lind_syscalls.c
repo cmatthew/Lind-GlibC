@@ -700,6 +700,10 @@ struct lind_comp_cia_rpc_s {
   int mailbox;
 };
 
+#define LIND_CIA_IOCTL 10001
+#define LIND_CALL_IOCTL 10002
+#define LIND_ACCEPT_IOCTL 10003
+#define LIND_RECV_IOCTL 10004
 
 int lind_comp_rpc(int request_num, int nbytes, void *buf) {
   int return_code = -1;
@@ -710,28 +714,53 @@ int lind_comp_rpc(int request_num, int nbytes, void *buf) {
   lind_reply reply;
   memset(&reply, 0, sizeof(reply));
 
-  if (request_num == 4001) {
+  switch(request_num) {
 
-    /* <i<i */
-    request.format = FMT_INT FMT_INT;
-    request.call_number = NACL_sys_comp_cia;
+    case LIND_CIA_IOCTL:
+      /* <i<i */
+      request.format = FMT_INT FMT_INT;
+      request.call_number = NACL_sys_comp_cia;
+      request.message.len = nbytes;
+      request.message.body = buf;
+      nacl_rpc_syscall_proxy(&request, &reply, 0);
+      break;
 
-    request.message.len = nbytes;
-    request.message.body = buf;
-  
-    nacl_rpc_syscall_proxy(&request, &reply, 0);
+    case LIND_CALL_IOCTL:
+      request.format = combine(3, FMT_INT FMT_INT, nacl_itoa( nbytes- (sizeof(int)*2)), "s");
+      request.call_number = NACL_sys_comp_call;
+      request.message.len = nbytes;
+      request.message.body = buf;
+      nacl_rpc_syscall_proxy(&request, &reply, 0);
+      break;
 
-    /* on error return negative so we can set ERRNO. */  
-    if (reply.is_error) {
-      return_code = reply.return_code * -1;
-    } else {
-      return_code = reply.return_code;
-      memcpy(buf, reply.contents, CONTENTS_SIZ(reply));
-    }
+    case LIND_ACCEPT_IOCTL:
+      request.format = FMT_INT;
+      request.call_number = NACL_sys_comp_accept;
+      request.message.len = nbytes;
+      request.message.body = buf;
+      nacl_rpc_syscall_proxy(&request, &reply, 0);
+      break;
+
+    case LIND_RECV_IOCTL:
+      request.format = "";
+      request.call_number = NACL_sys_comp_recv;
+      request.message.len = nbytes;
+      request.message.body = buf;
+      nacl_rpc_syscall_proxy(&request, &reply, 0);
+      break;
+      
+
 
   }
-
+  
+  
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+    memcpy(buf, reply.contents, CONTENTS_SIZ(reply));
+  }
+  
   return return_code;
-
-
 }

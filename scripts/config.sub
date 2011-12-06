@@ -4,7 +4,7 @@
 #   2000, 2001, 2002, 2003, 2004, 2005, 2006 Free Software Foundation,
 #   Inc.
 
-timestamp='2006-02-27'
+timestamp='2011-11-24'
 
 # This file is (in principle) common to ALL GNU software.
 # The presence of a machine in this file suggests that SOME GNU software
@@ -230,6 +230,10 @@ case $os in
 		basic_machine=m68k-atari
 		os=-mint
 		;;
+        -nacl*)
+                basic_machine=i686-pc
+                os=-nacl
+                ;;
 esac
 
 # Decode aliases for certain CPU-COMPANY combinations.
@@ -269,6 +273,7 @@ case $basic_machine in
 	| mn10200 | mn10300 \
 	| mt \
 	| msp430 \
+	| nacl \
 	| nios | nios2 \
 	| ns16k | ns32k \
 	| or32 \

@@ -106,6 +106,9 @@
  
 #define NACL_sys_dyncode_copy           104
 #define NACL_sys_comp_cia               105
+#define NACL_sys_comp_call              106
+#define NACL_sys_comp_accept            107
+#define NACL_sys_comp_recv              108
 
 #define NACL_MAX_SYSCALLS               110
 
