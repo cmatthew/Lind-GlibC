@@ -9,7 +9,7 @@
 #include "strace.h"
 #include "nacl_util.h"
 #include "nacl_syscalls.h"
-
+#include "component.h"
 #include <kernel_stat.h>
 #include <nacl_stat.h>
 #include <sys/statfs.h>
@@ -306,7 +306,7 @@ struct lind_access_rpc_s {
 
 
 
-/** Send access call to RePy via lind RPC.  file is the name of the file to chcek
+/** Send access call to RePy via lind RPC.  file is the name of the file to check
  type is the access mode ( W_OK, R_OK, X_OK or an | of them). */
 int lind_access_rpc (const char * file, int type) {
 
@@ -473,7 +473,7 @@ struct lind_mkdir_rpc_s {
 };
 
 
-/** Send mkdir call to RePy via lind RPC.  Path is a path */
+/** Send mkdir call to RePy via rind RPC.  Path is a path */
 int lind_mkdir_rpc (const char * path, mode_t mode) {
 
   lind_request request;
@@ -513,7 +513,7 @@ int lind_mkdir_rpc (const char * path, mode_t mode) {
 }
 
 
-/** Send rmdir call to RePy via lind RPC.  Path is a path */
+/** Send rmdir call to RePy via Lind RPC.  Path is a path */
 int lind_rmdir_rpc (const char * path) {
 
   lind_request request;
@@ -695,15 +695,7 @@ ssize_t lind_getdents_rpc (int fd, char *buf, size_t nbytes, off_t *basep) {
 }
 
 
-struct lind_comp_cia_rpc_s {
-  int comp;
-  int mailbox;
-};
-
-#define LIND_CIA_IOCTL 10001
-#define LIND_CALL_IOCTL 10002
-#define LIND_ACCEPT_IOCTL 10003
-#define LIND_RECV_IOCTL 10004
+#define MIN(X,Y) ( (X) < (Y) ? (X) : (Y))
 
 int lind_comp_rpc(int request_num, int nbytes, void *buf) {
   int return_code = -1;
@@ -717,7 +709,6 @@ int lind_comp_rpc(int request_num, int nbytes, void *buf) {
   switch(request_num) {
 
     case LIND_CIA_IOCTL:
-      /* <i<i */
       request.format = FMT_INT FMT_INT;
       request.call_number = NACL_sys_comp_cia;
       request.message.len = nbytes;
@@ -725,41 +716,39 @@ int lind_comp_rpc(int request_num, int nbytes, void *buf) {
       nacl_rpc_syscall_proxy(&request, &reply, 0);
       break;
 
-    case LIND_CALL_IOCTL:
-      request.format = combine(3, FMT_INT FMT_INT, nacl_itoa( nbytes- (sizeof(int)*2)), "s");
+    case LIND_CALL_IOCTL:;
+      struct call_s * call_args = (struct call_s *) buf;
+      /* string part of struct is everything execpt the first 2 ints, and the null terminator. */
+      request.format = combine(3, FMT_INT FMT_UINT FMT_UINT, nacl_itoa((int)(call_args->siz)-1), "s");
       request.call_number = NACL_sys_comp_call;
-      request.message.len = nbytes;
+      request.message.len = sizeof(struct call_s);
       request.message.body = buf;
-      nacl_rpc_syscall_proxy(&request, &reply, 0);
+      nacl_rpc_syscall_proxy(&request, &reply, 1, call_args->message, call_args->siz);
       break;
 
     case LIND_ACCEPT_IOCTL:
-      request.format = FMT_INT;
+      request.format = FMT_INT FMT_INT FMT_INT;
       request.call_number = NACL_sys_comp_accept;
       request.message.len = nbytes;
       request.message.body = buf;
       nacl_rpc_syscall_proxy(&request, &reply, 0);
       break;
-
-    case LIND_RECV_IOCTL:
-      request.format = "";
-      request.call_number = NACL_sys_comp_recv;
-      request.message.len = nbytes;
-      request.message.body = buf;
-      nacl_rpc_syscall_proxy(&request, &reply, 0);
-      break;
-      
-
-
   }
-  
-  
+
   /* on error return negative so we can set ERRNO. */  
   if (reply.is_error) {
     return_code = reply.return_code * -1;
   } else {
     return_code = reply.return_code;
-    memcpy(buf, reply.contents, CONTENTS_SIZ(reply));
+
+    if (request_num == LIND_ACCEPT_IOCTL) {
+      struct comp_accept_s * accept_args = (struct comp_accept_s *) buf;
+      int content_size = return_code;
+      int buff_size = accept_args->max;
+      int min_size = MIN(content_size,buff_size);
+
+      memcpy(accept_args->buff, reply.contents, min_size);
+    }
   }
   
   return return_code;

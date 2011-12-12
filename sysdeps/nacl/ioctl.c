@@ -7,9 +7,8 @@
 
 #include <nacl_rpc.h>
 #include <nacl_syscalls.h>
-/* #include <stdio-common/_itoa.h> */
 
-
+#include "component.h"
 #include "strace.h"
 #include "nacl_util.h"
 #include "lind_syscalls.h"
@@ -28,30 +27,33 @@ __ioctl (int fd, unsigned long int request, ...)
   if (is_system_handle(fd)) {
     /* I think system handles can't have ioctls because they are not implemented
      * in NaCl, so we should return ENOSYS on error no and fail for this handle  */
- 
-    if (fd == 9 && request > 10000 && request <= 10004) {
+    /* with one exception, out component system FD, which is always set to 9 */
+    if (fd == COMP_FIXED_FD && request >= LIND_LOW_IOCTL && request <= LIND_HIGH_IOCTL) {
       /* Do a lind component call */
       va_list argp;
       va_start(argp, request);
   
-      int req =  va_arg(argp,int);
+      int size =  va_arg(argp,int);
       void* buf = va_arg(argp, void*);
-      /* nacl_strace(combine(4, "comp ioctl ", nacl_itoa(req), " ", nacl_itoa((int)buf)) ); */
-      result = lind_comp_rpc(request, req, buf);
+     
+      result = lind_comp_rpc(request, size, buf);  
+     
       va_end(argp);
     } else {
-      /* send to lind server. For now, don't send optional args  */
-      result = -38;
+      /* if we are the system handles return ENOSYS */
+       result = -ENOSYS;
     }
   } else {
-     result = lind_ioctl_rpc(fd, request);
+    /* send to lind server. For now, don't send optional args  */
+    result = lind_ioctl_rpc(fd, request);
   }
     
+  /* setup errno */
   if (result < 0) {
     __set_errno(-result);
     return -1;
   }
-  return 0;
+  return result;
 
 }
 
