@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <assert.h>
 
 #include "lind_rpc.h"
 #include "lind_syscalls.h"
@@ -115,6 +115,7 @@ int lind_read_rpc(int handle, int size, void * where_to) {
     return_code = reply.return_code * -1;
   } else {
     return_code = reply.return_code;
+    assert( CONTENTS_SIZ(reply) <= size);
     memcpy( where_to, reply.contents, return_code);
   }
 
@@ -599,6 +600,7 @@ int lind_getpid_rpc (pid_t* buffer) {
     return_code = reply.return_code * -1;
   } else {
     return_code = reply.return_code;
+    assert(CONTENTS_SIZ(reply) == sizeof(pid_t));
     memcpy(buffer, reply.contents, sizeof(pid_t));
   }
   
@@ -643,6 +645,7 @@ int lind_xstat_rpc (int version, const char *path, struct stat *buf) {
     return_code = reply.return_code * -1;
   } else {
     return_code = reply.return_code;
+    assert( CONTENTS_SIZ(reply) == sizeof(struct stat));
     memcpy(buf, reply.contents, CONTENTS_SIZ(reply));
   }
 
@@ -687,6 +690,7 @@ ssize_t lind_getdents_rpc (int fd, char *buf, size_t nbytes, off_t *basep) {
     return_code = reply.return_code * -1;
   } else {
     return_code = reply.return_code;
+    assert( CONTENTS_SIZ(reply) <= nbytes);
     memcpy(buf, reply.contents, CONTENTS_SIZ(reply));
   }
 
@@ -746,7 +750,7 @@ int lind_comp_rpc(int request_num, int nbytes, void *buf) {
       int content_size = return_code;
       int buff_size = accept_args->max;
       int min_size = MIN(content_size,buff_size);
-
+      assert( CONTENTS_SIZ(reply) <= nbytes);
       memcpy(accept_args->buff, reply.contents, min_size);
     }
   }
