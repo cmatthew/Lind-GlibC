@@ -746,11 +746,12 @@ int lind_comp_rpc(int request_num, int nbytes, void *buf) {
     return_code = reply.return_code;
 
     if (request_num == LIND_ACCEPT_IOCTL) {
+      
       struct comp_accept_s * accept_args = (struct comp_accept_s *) buf;
       int content_size = return_code;
       int buff_size = accept_args->max;
-      int min_size = MIN(content_size,buff_size);
-      assert( CONTENTS_SIZ(reply) <= nbytes);
+      int min_size = MIN(content_size, buff_size);
+      assert( CONTENTS_SIZ(reply) <= min_size);
       memcpy(accept_args->buff, reply.contents, min_size);
     }
   }
