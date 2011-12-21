@@ -15,9 +15,9 @@ __access (const char* file, int type)
       return -1;
     }
 
-  nacl_strace(concat("access ",file));
+  nacl_strace(combine(3, "access ", file, nacl_itoa(type) ));
 
-  /* since everything is okay, forward to lind server. */
+  /* Since everything is okay, forward to lind server. */
   int return_code = lind_access_rpc(file, type);
 
   if (return_code < 0) {
