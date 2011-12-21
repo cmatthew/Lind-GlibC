@@ -758,3 +758,39 @@ int lind_comp_rpc(int request_num, int nbytes, void *buf) {
   
   return return_code;
 }
+
+
+int lind_fstatfs_rpc (int fd, struct statfs *buf) {
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+
+  struct lind_fd_rpc_s args;
+  memset(&args, 0, sizeof(args));
+  
+  /* setup arguments */
+  int return_code = -1;
+  args.fd = fd;
+
+  request.format = FMT_INT;
+  request.call_number = NACL_sys_fstatfs;
+
+  request.message.len = sizeof(struct lind_fd_rpc_s);
+  request.message.body = &args;
+  
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+    assert( CONTENTS_SIZ(reply) == sizeof(struct statfs));
+    memcpy(buf, reply.contents, CONTENTS_SIZ(reply));
+  }
+
+  return return_code;
+}
+

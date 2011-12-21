@@ -10,19 +10,19 @@
 int
 __fstatfs (int fd, struct statfs *buf)
 {
-  nacl_strace( concat("fstatfs fd=",nacl_itoa(fd)) );
+  nacl_strace( combine(3, "fstatfs fd=", nacl_itoa(fd), " is disabled\n" ) );
  
-  /* if (is_system_handle(fd)) { */
-  /*      __set_errno (ENOSYS); */
-  /*      return -1; */
-  /* } */
-  /* /\* */
-  /* int lind_rc = lind_fstat_rpc(fd, buf); */
-  /* *\/ */
-  /* if (lind_rc < 0) { */
-  /*   __set_errno (-lind_rc); */
-  /*    return -1; */
-  /* } */
+  if (is_system_handle(fd)) {
+       __set_errno (ENOSYS);
+       return -1;
+  }
+  
+  int lind_rc = lind_fstatfs_rpc(fd, buf);
+  
+  if (lind_rc < 0) {
+    __set_errno (-lind_rc);
+     return -1;
+  }
    __set_errno (ENOSYS);
   return -1; /* lind_rc;*/
 }

@@ -46,7 +46,7 @@
 #define NACL_sys_stat                   16
 #define NACL_sys_fstat                  17
 #define NACL_sys_chmod                  18
-/* no fchmod emulation on windows */
+#define NACL_sys_fstatfs                19
 
 #define NACL_sys_sysbrk                 20
 #define NACL_sys_mmap                   21
