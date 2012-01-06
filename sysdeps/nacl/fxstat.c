@@ -42,32 +42,32 @@ void __nacl_abi_stat_to_stat (struct nacl_abi_stat *nacl_st,
 int __fxstat (int vers, int fd, struct stat *buf)
 {
    if (buf == NULL) {
-    errno = EFAULT;
-    return -1;
-  }
-
-
-  nacl_strace( concat("fstatfs fd=",nacl_itoa(fd)) );
- 
-  if (fd < 10) {
-    struct nacl_abi_stat nacl_buf;
-    int result = NACL_SYSCALL (fstat) (fd, &nacl_buf);
-    if (result < 0) {
-      errno = -result;
-      return -1;
-    }
-    __nacl_abi_stat_to_stat (&nacl_buf, buf);
-    return result;
-  }
-
-  int lind_rc = lind_fstat_rpc(fd, buf);
-
-  if (lind_rc < 0) {
-    __set_errno (-lind_rc);
+     errno = EFAULT;
      return -1;
-  }
+   }
+
+
+   nacl_strace( combine(4, "fxstat fd=",nacl_itoa(fd), ", version=", nacl_itoa(vers)) );
+ 
+   if (is_system_handle(fd)) {
+     struct nacl_abi_stat nacl_buf;
+     int result = NACL_SYSCALL (fstat) (fd, &nacl_buf);
+     if (result < 0) {
+       errno = -result;
+       return -1;
+     }
+     __nacl_abi_stat_to_stat (&nacl_buf, buf);
+     return result;
+   }
+
+   int lind_rc = lind_fxstat_rpc(fd, vers, buf);
+
+   if (lind_rc < 0) {
+     __set_errno (-lind_rc);
+     return -1;
+   }
   
-  return lind_rc;
+   return lind_rc;
 
 }
 hidden_def(__fxstat)

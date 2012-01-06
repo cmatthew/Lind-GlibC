@@ -10,7 +10,7 @@
 #include "nacl_util.h"
 #include "nacl_syscalls.h"
 #include "component.h"
-#include <kernel_stat.h>
+/* #include <kernel_stat.h> */
 #include <nacl_stat.h>
 #include <sys/statfs.h>
 #include <sys/stat.h>
@@ -20,8 +20,8 @@
 
 #define FMT_INT "<i"
 #define FMT_UINT "<I"
-#define FMT_LONG "<i"
-#define FMT_ULONG "<I"
+#define FMT_LONG "<q"
+#define FMT_ULONG "<Q"
 #define FMT_STR(len) #len "s"
 
 
@@ -41,7 +41,13 @@ struct lind_lseek_rpc_s {
   int fd;
   int whence;
   off_t offset;
+
 };
+
+struct lind_fd_rpc_s {
+  int fd;
+};
+
 
 
 /** Send an open request to the lind server.
@@ -124,28 +130,30 @@ int lind_read_rpc(int handle, int size, void * where_to) {
 }
 
 
-struct lind_fd_rpc_s {
+
+struct lind_fxstat_rpc_s {
   int fd;
+  int vers;
 };
 
 
-
-int lind_fstat_rpc(int fd, struct stat *buf) {
+int lind_fxstat_rpc(int fd, int vers, struct stat *buf) {
 
   lind_request request;
   memset(&request, 0, sizeof(request));
   lind_reply reply;
   memset(&reply, 0, sizeof(reply));
-  struct lind_fd_rpc_s args;
-  memset(&args, 0, sizeof(struct lind_fd_rpc_s));
+  struct lind_fxstat_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_fxstat_rpc_s));
 
   int return_code = -1;
   args.fd = fd;
+  args.vers = vers;
 
   request.call_number = NACL_sys_fstat;
-  request.format = "<i";
+  request.format = FMT_INT FMT_INT;
 
-  request.message.len = sizeof(struct lind_fd_rpc_s);
+  request.message.len = sizeof(struct lind_fxstat_rpc_s);
   request.message.body = &args;
  
   nacl_rpc_syscall_proxy(&request, &reply, 0);
@@ -155,6 +163,7 @@ int lind_fstat_rpc(int fd, struct stat *buf) {
     return_code = reply.return_code * -1;
   } else {
     return_code = reply.return_code;
+    assert( CONTENTS_SIZ(reply) == sizeof(struct stat));
     memcpy(buf, reply.contents, sizeof(struct stat));
   }
 
@@ -166,7 +175,7 @@ int lind_fstat_rpc(int fd, struct stat *buf) {
 
 /* lseek system call.   Has three arguments (int fd, off_t offset, int whence)
  * returns a off_t (__SQUAD_TYPE) which is a 64 bit signed type. */
-int lind_lseek_rpc(int fd, off_t offset, int whence) {
+int lind_lseek_rpc(int fd, off_t offset, int whence, off_t* ret_loc) {
 
   lind_request request;
   memset(&request, 0, sizeof(request));
@@ -184,7 +193,7 @@ int lind_lseek_rpc(int fd, off_t offset, int whence) {
 
   request.call_number = NACL_sys_lseek;
   /* int fd, int whence, long (as string) */
-  request.format = "<i<i7s";
+  request.format = FMT_INT FMT_INT FMT_LONG;
 
   request.message.len = sizeof( struct lind_lseek_rpc_s );
   request.message.body = &args;
@@ -196,6 +205,9 @@ int lind_lseek_rpc(int fd, off_t offset, int whence) {
     return_code = reply.return_code * -1;
   } else {
     return_code = reply.return_code;
+    assert( CONTENTS_SIZ(reply) == sizeof(off_t));
+    memcpy(ret_loc, reply.contents, CONTENTS_SIZ(reply));
+
   }
   
   return return_code;
@@ -660,7 +672,7 @@ struct lind_getdents_rpc_s {
 
 /** For now we exclude basep.
  */
-ssize_t lind_getdents_rpc (int fd, char *buf, size_t nbytes, off_t *basep) {
+ssize_t lind_getdents_rpc (int fd, char *buf, size_t nbytes) {
 
  lind_request request;
   memset(&request, 0, sizeof(request));
@@ -677,7 +689,7 @@ ssize_t lind_getdents_rpc (int fd, char *buf, size_t nbytes, off_t *basep) {
   args.nbytes = nbytes;
  
   /* <i(STRLEN)s */
-  request.format = FMT_INT FMT_LONG;
+  request.format = FMT_INT FMT_INT;
   request.call_number = NACL_sys_getdents;
 
   request.message.len = sizeof(struct lind_getdents_rpc_s);

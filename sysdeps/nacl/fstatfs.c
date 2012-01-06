@@ -13,6 +13,8 @@ __fstatfs (int fd, struct statfs *buf)
   nacl_strace( combine(3, "fstatfs fd=", nacl_itoa(fd), " is disabled\n" ) );
  
   if (is_system_handle(fd)) {
+      nacl_strace( "not checked becuase system handle." );
+
        __set_errno (ENOSYS);
        return -1;
   }
@@ -24,7 +26,7 @@ __fstatfs (int fd, struct statfs *buf)
      return -1;
   }
    __set_errno (ENOSYS);
-  return -1; /* lind_rc;*/
+   return 0;
 }
 
 weak_alias (__fstatfs, fstatfs)

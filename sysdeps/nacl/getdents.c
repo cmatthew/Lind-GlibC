@@ -23,13 +23,14 @@
 #include "lind_syscalls.h"
 #include "strace.h"
 
-ssize_t
-__getdirentries (int fd, char *buf, size_t nbytes, off_t *basep) {
+/* CM: I think this file can be deleted? It is reaplaced by the nacl versions */
 
-  nacl_strace("getdents");
-  ssize_t result = lind_getdents_rpc(fd, buf, nbytes, basep);
-  
-    return result;
+/* ssize_t */
+/* __getdirentries (int fd, char *buf, size_t nbytes, off_t *basep) { */
+/*   nacl_strace("getdents"); */
+/*   /\* See comment above about this file not being used. *\/ */
+/*   ssize_t result = lind_getdents_rpc(fd, buf, nbytes, basep); */
+/*   return result; */
 
-}
-weak_alias (__getdirentries, getdirentries)
+/* } */
+/* weak_alias (__getdirentries, getdirentries) */
