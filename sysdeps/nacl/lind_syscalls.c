@@ -806,3 +806,150 @@ int lind_fstatfs_rpc (int fd, struct statfs *buf) {
   return return_code;
 }
 
+
+int lind_dup_rpc(int oldfd) {
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+  struct lind_fd_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_fd_rpc_s));
+
+  int return_code = -1;
+  args.fd = oldfd;
+
+  request.call_number = NACL_sys_dup;
+  request.format = "<i";
+
+  request.message.len = sizeof(struct lind_fd_rpc_s);
+  request.message.body = &args;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+
+}
+
+
+struct lind_dup2_rpc_s {
+  int fd;
+  int fd2;
+};
+
+
+
+int lind_dup2_rpc(int oldfd, int newfd) {
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+  struct lind_dup2_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_dup2_rpc_s));
+
+  int return_code = -1;
+  args.fd = oldfd;
+  args.fd2 = newfd;
+
+  request.call_number = NACL_sys_dup2;
+  request.format = FMT_INT FMT_INT;
+
+  request.message.len = sizeof(struct lind_dup2_rpc_s);
+  request.message.body = &args;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+
+}
+
+
+struct lind_fcntl_rpc_s {
+  int fd;
+  int cmd;
+};
+
+
+
+int lind_fcntl_rpc (int fd, int cmd, ...)  {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+  struct lind_fcntl_rpc_s args;
+  memset(&args, 0, sizeof(struct lind_fcntl_rpc_s));
+
+  int return_code = -1;
+  args.fd = fd;
+  args.cmd = cmd;
+
+  request.call_number = NACL_sys_fcntl;
+  request.format = FMT_INT FMT_INT;
+
+  request.message.len = sizeof(struct lind_fcntl_rpc_s);
+  request.message.body = &args;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 0);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+  }
+  
+  return return_code;
+
+}
+
+
+
+int lind_statfs_rpc (const char * path, struct statfs *buf) {
+
+  lind_request request;
+  memset(&request, 0, sizeof(request));
+  lind_reply reply;
+  memset(&reply, 0, sizeof(reply));
+
+  int return_code = -1;
+  request.call_number = NACL_sys_statfs;
+
+  /* Now build the format string which is LENGTHs */
+  size_t file_name_length = strlen(path);
+  size_t file_name_size = file_name_length + 1; /* size in bytes */
+  const char * str_len = nacl_itoa(file_name_length);
+  const char * str_len_s = combine(2, str_len, "s"); 
+  request.format = str_len_s;
+
+  request.message.len = 0;
+  request.message.body = NULL;
+ 
+  nacl_rpc_syscall_proxy(&request, &reply, 1, path, file_name_size);
+
+  /* on error return negative so we can set ERRNO. */  
+  if (reply.is_error) {
+    return_code = reply.return_code * -1;
+  } else {
+    return_code = reply.return_code;
+    assert( CONTENTS_SIZ(reply) == sizeof(struct statfs));
+    memcpy(buf, reply.contents, CONTENTS_SIZ(reply));
+  }
+  
+  return return_code;
+
+}
+

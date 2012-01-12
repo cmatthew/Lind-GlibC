@@ -53,6 +53,13 @@
 #define NACL_sys_munmap                 22
 
 #define NACL_sys_getdents               23
+#define NACL_sys_dup                    24
+#define NACL_sys_dup2                   25
+#define NACL_sys_statfs                 26
+#define NACL_sys_creat                  27
+#define NACL_sys_fcntl                  28
+
+
 
 #define NACL_sys_exit                   30
 #define NACL_sys_getpid                 31

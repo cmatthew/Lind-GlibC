@@ -27,5 +27,11 @@ int lind_xstat_rpc (int version, const char *path, struct stat *buf);
 ssize_t lind_getdents_rpc(int fd, char *buf, size_t nbytes);
 int lind_comp_rpc(int request, int nbytes, void *buf);
 
+int lind_dup_rpc(int oldfd);
+int lind_dup2_rpc(int oldfd, int newfd);
+int lind_fcntl_rpc (int fd, int cmd, ...);
+int lind_statfs_rpc (const char * path, struct statfs *buf);
+
+
 
 

@@ -1,5 +1,4 @@
-/* statfs -- Return information about the filesystem on which FILE resides.
-   Copyright (C) 1996, 1997, 2002 Free Software Foundation, Inc.
+/* Copyright (C) 1991, 1995, 1996, 1997, 2002 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -18,23 +17,37 @@
    02111-1307 USA.  */
 
 #include <errno.h>
-#include <sys/statfs.h>
-#include <stddef.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "lind_syscalls.h"
 
-/* Return information about the filesystem on which FILE resides.  */
+/* Duplicate FD to FD2, closing the old FD2 and making FD2 be
+   open the same file as FD is.  Return FD2 or -1.  */
 int
-__statfs (const char *file, struct statfs *buf)
+__dup2 (fd, fd2)
+     int fd;
+     int fd2;
 {
+  if (fd < 0 || fd2 < 0)
+    {
+      __set_errno (EBADF);
+      return -1;
+    }
+
+  if (fd == fd2)
+    /* No way to check that they are valid.  */
+    return fd2;
+  
   int result;
-  result = lind_statfs_rpc(file, buf);
+  result = lind_dup2_rpc(fd, fd2);
   if (result < 0) {
-    errno = -result;
-    result = -1;
+    __set_errno(result*-1);
+    return -1;
   }
   return result;
-
 }
-libc_hidden_def (__statfs)
-weak_alias (__statfs, statfs)
+libc_hidden_def (__dup2)
+stub_warning (dup2)
 
+weak_alias (__dup2, dup2)
+#include <stub-tag.h>
