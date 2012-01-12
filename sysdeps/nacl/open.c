@@ -2,9 +2,10 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdarg.h>
-#include <unistd.h>
-#include <string.h>
+#include <stdlib.h>
 
+
+#include <unistd.h>
 #include <nacl_rpc.h>
 #include <nacl_syscalls.h>
 /* #include <stdio-common/_itoa.h> */
@@ -98,6 +99,7 @@ int __open (const char *filename, int flags, ...)
     va_end(arg);
   }
 
+  
   nacl_strace(concat("open ",filename));
   
 
@@ -112,7 +114,11 @@ int __open (const char *filename, int flags, ...)
     errno = -lind_rc;
      return -1;
   }
-  nacl_strace(concat("opened as ", nacl_itoa(result)));
+  char * r; 
+  char * str = concat("opened as ", aitoa(&r,result));
+  nacl_strace(str);
+  free(r);
+  free(str);
   return result;
 }
 libc_hidden_def (__open)
