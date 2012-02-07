@@ -7,16 +7,18 @@
 #include <nacl_rpc.h>
 #include <nacl_syscalls.h>
 #include <stdarg.h>
+#include "lindlock.h"
 #include "strace.h"
 #include "nacl_util.h"
 #include "lind_rpc.h"
+
 /* if we start logging to early, we crash the system.
  So wait until the first file is opened, we are safe
 by then.  */
 
 static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply, int nargs, va_list ertra_args);
 
-
+static lindlock socket_lock = -1;
 
 static int _lind_ready_to_log = 0;
 
@@ -50,7 +52,7 @@ void _lind_strace(const char* message) {
     memset(&request, 0, sizeof(lind_request));
     
     request.message.body = strdup(message);
-    request.message.len = strlen(message) + 1;
+    request.message.len = strlen(message);
     request.format = nacl_itoa(strlen(message));
     request.format = concat(request.format, "s");
     request.call_number = NACL_sys_trace;
@@ -158,6 +160,9 @@ lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * repl
 */
 static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply, int nargs, va_list extra_args) {
 
+  if ( socket_lock == -1) {
+	socket_lock = lindlock_init();
+  }
   /* Construct a message such that first part is a message header,
      then the syscall specific data.  */
   int iov_len = (request->message.body == NULL)?2:3; /* is there a payload in this message? */
@@ -201,6 +206,7 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   request_msg.desc_length = 0;
 
   int write_rc = 0;
+  lindlock_lock(socket_lock);
   if ( (write_rc = imc_sendmsg (NACL_PLUGIN_ASYNC_FROM_CHILD_FD, &request_msg, 0)) < 1) {
     return RPC_WRITE_ERROR;
   }
@@ -223,9 +229,11 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   reply_msg.flags = 0;
 
   if (imc_recvmsg (NACL_PLUGIN_ASYNC_TO_CHILD_FD, &reply_msg, 0 ) < 1) {
+	lindlock_unlock(socket_lock);
     return RPC_READ_ERROR;
+  } else {
+	lindlock_unlock(socket_lock);
   }
-  
   if (reply->magic_number != MAGIC) {
      return RPC_PROTOCOL_ERROR;
   }
