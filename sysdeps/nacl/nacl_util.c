@@ -39,6 +39,13 @@ char* nacl_itoa(int integer)
   return result;
 }  
   
+char * aitoa(char ** spot, int integer) {
+  char * result = nacl_itoa(integer);
+  *spot = result;
+  return result;
+}
+
+
 #ifdef TESTING
 
 static int __attribute ((unused)) test_itoa() {
@@ -99,6 +106,30 @@ int is_system_handle(int fd) {
   }
 
 }
+
+
+/* int primative_sizeof(char * item) { */
+
+/*   if (strcmp(item, "i")) { */
+/*     return sizeof(int); */
+/*   }  else if (strcmp(item, "I")) { */
+/*       return sizeof(unsigned int); */
+/*   }  else if (strcmp(item, "q")) { */
+/*       return sizeof(long); */
+/*   }  else if (strcmp(item, "Q")) { */
+/*       return sizeof(unsigned long); */
+/*   }  else if (strcmp(item, "s")) { */
+/*       return sizeof(char); */
+/*   }  else if (strcmp(item, "c")) { */
+/*     return sizeof(char); */
+/*   } else { */
+/*     return 0; */
+
+/* } */
+
+/* ssize_t calc_size(char * format) { */
+
+/* } */
 
 #ifdef TESTING
 

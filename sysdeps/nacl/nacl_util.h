@@ -8,6 +8,8 @@ cmatthew@cs.uvic.ca
 /* Note comment in C fie. Put the ascii representation of int into char* with max digitis */
 char * nacl_itoa(int);
 
+/* call itoa, storing the result ptr in arg */
+char * aitoa(char **, int);
 
 /* Combine "op" and "arg" into a new larger string "oparg"
  op and arg are left untouched. Oparg is allocated by a 
