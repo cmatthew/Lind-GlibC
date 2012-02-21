@@ -3,9 +3,15 @@
 
 typedef enum lind_rpc_status_e {RPC_OK = 0, RPC_WRITE_ERROR, RPC_READ_ERROR, RPC_ARGS_ERROR, RPC_PROTOCOL_ERROR} lind_rpc_status;
 
-
+/* This number is checked on the other side to make sure we are sending valid data. */
 #define MAGIC 101010
-#define buf_siz 1024
+
+/* The size of the send and recv buffers. As far as I can tell, this is the 
+ unix domain sockets biggest. */
+#define buf_siz (4096*4)
+
+/* When we are sending small messages, no point in allocating a huge buffer. */
+#define small_buf_siz 32
 
 struct lind_message {
   unsigned int len;		/* size of the message in bytes */
@@ -26,7 +32,7 @@ typedef struct lind_rpc_reply {
   char contents[buf_siz - sizeof(int) * 4]; /* data payload */
 } lind_reply;
 
-#define CONTENTS_SIZ(x) (x.message_size - sizeof(int)*4)
+#define CONTENTS_SIZ(x) (x->message_size - sizeof(int)*4)
 
 lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, 
 					    const char* format, 

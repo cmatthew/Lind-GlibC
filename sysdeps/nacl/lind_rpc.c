@@ -12,15 +12,18 @@
 #include "nacl_util.h"
 #include "lind_rpc.h"
 
+
 /* if we start logging to early, we crash the system.
  So wait until the first file is opened, we are safe
 by then.  */
-
 static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply, int nargs, va_list ertra_args);
+
 
 static lindlock socket_lock = -1;
 
+
 static int _lind_ready_to_log = 0;
+
 
 static const char * lind_rpc_status_messages[] = {"RPC OK", 
 					    "RPC Write Error", 
@@ -45,6 +48,13 @@ void set_no_logging(void) {
 }
 
 
+/** Implementation of the nacl_strace function.
+ * it is redirected here by a macro.  Just prints
+ * the message in python. 
+ *
+ *  Note: since this is used for error message printing
+ * if it fails, we cannot print a error message.
+ */
 void _lind_strace(const char* message) {
   if (get_logging_status()) { 
     lind_request request;
@@ -62,20 +72,31 @@ void _lind_strace(const char* message) {
 }
 
 
+/** This struct is the wire format for the header sent to Python.
+ *
+ */
 struct nacl_rpc_syscall {
+
   /* Used to check on the python side we are getting the struct correctly */
   int magic_number;
+
   /* The system call number  */
   unsigned int syscall_number;
 
   unsigned int format_string_len;
+  
+  /* size of the payload, excluding the header and format string. */
+  unsigned int payload_size;
+
+  /* message sequence number.  One bigger each time hopefully! */
+  unsigned int sequence_number;
 
   /* another number to make sure we get everything we expect. */
   int validation_number;
 };
 
 /* check then populate header information for syscall struct. */
-static void nacl_rpc_setup_header(struct nacl_rpc_syscall * current_call, lind_request * request) {
+static void nacl_rpc_setup_header(struct nacl_rpc_syscall * current_call, lind_request * request, unsigned int size) {
   
   /* Something signed that we can verify we are getting the correct stuff on the other side */
   const int magic = -2;
@@ -85,6 +106,7 @@ static void nacl_rpc_setup_header(struct nacl_rpc_syscall * current_call, lind_r
   memset( (void*) current_call, 0, sizeof(struct nacl_rpc_syscall));
 
   current_call->magic_number = magic;
+  current_call->payload_size = size;
   current_call->syscall_number = request->call_number;
   current_call->format_string_len = format_num_chars;
   current_call->validation_number = magic + request->call_number + format_num_chars; /* simple checksum style validation of message */
@@ -93,7 +115,7 @@ static void nacl_rpc_setup_header(struct nacl_rpc_syscall * current_call, lind_r
 
 
 /**  This function used to be used for system calls. Now it is not, but trace still uses it, so we keep it here.
-
+ *
  */
 lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char* format, unsigned int len, void* body, int * retval, int nargs, ...) {
 
@@ -157,12 +179,19 @@ lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * repl
     which has to work, or from places where printing an error wont work.
     See nacl_rpc_syscall_proxy for safe wrapper!
 
+	Function builds an I/O vector with a header as the first element, then
+	 the format string, then the value parameters, then one element per
+	 reference parameter.  
+
 */
 static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply, int nargs, va_list extra_args) {
+
+  static unsigned int global_seq_num;
 
   if ( socket_lock == -1) {
 	socket_lock = lindlock_init();
   }
+  unsigned int size = 0;
   /* Construct a message such that first part is a message header,
      then the syscall specific data.  */
   int iov_len = (request->message.body == NULL)?2:3; /* is there a payload in this message? */
@@ -171,7 +200,7 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   struct NaClImcMsgIoVec iov[iov_len];
   memset(iov, 0, sizeof(iov));
   struct nacl_rpc_syscall current_call;
-  nacl_rpc_setup_header(&current_call, request); 
+  nacl_rpc_setup_header(&current_call, request, size); 
 
   /* add header */
   iov[iov_pos].base =  &current_call;
@@ -187,6 +216,7 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   if (request->message.body != NULL) {
     iov[iov_pos].base = request->message.body;
     iov[iov_pos].length = request->message.len;
+	size += request->message.len;
     iov_pos += 1;
   }
 
@@ -195,9 +225,12 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   for (i = 0; i < nargs; i++) {
     iov[iov_pos].base = va_arg(extra_args, void *);
     iov[iov_pos].length = va_arg(extra_args, int);
+	size += iov[iov_pos].length;
     iov_pos += 1;
   }
- 
+
+  current_call.payload_size = size;
+
   struct NaClImcMsgHdr request_msg;
   memset(&request_msg, 0, sizeof(struct NaClImcMsgHdr));
   request_msg.iov = iov;
@@ -207,6 +240,8 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
 
   int write_rc = 0;
   lindlock_lock(socket_lock);
+  current_call.sequence_number = global_seq_num;
+  global_seq_num = global_seq_num + 1;
   if ( (write_rc = imc_sendmsg (NACL_PLUGIN_ASYNC_FROM_CHILD_FD, &request_msg, 0)) < 1) {
     return RPC_WRITE_ERROR;
   }
