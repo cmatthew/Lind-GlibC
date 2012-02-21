@@ -103,7 +103,7 @@ int __open (const char *filename, int flags, ...)
   nacl_strace(concat("open ",filename));
   
 
-  int lind_rc = lind_open_rpc(filename, flags, mode);
+  int lind_rc = lind_open_rpc(flags, mode, filename);
   if( lind_rc >= 0) {
      nacl_strace(concat("opened as ", nacl_itoa(lind_rc)));
     return lind_rc;
