@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <nacl_rpc.h>
+#include <strace.h>
 extern int lind_ready_to_log;
 
 
@@ -303,7 +304,7 @@ void argmsg_move_to_stack (struct process_args *args,
 
 void jump_to_elf_start (void *buf, uintptr_t entry_func, uintptr_t atexit_func)
 {
-
+  nacl_strace("Calling Main.");
   /* The ELF entry point ABI is such that assembly code is required to
      call the entry point.
      See http://code.google.com/p/nativeclient/issues/detail?id=1131
