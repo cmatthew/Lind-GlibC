@@ -18,7 +18,7 @@ __access (const char* file, int type)
   nacl_strace(combine(3, "access ", file, nacl_itoa(type) ));
 
   /* Since everything is okay, forward to lind server. */
-  int return_code = lind_access_rpc(file, type);
+  int return_code = lind_access_rpc(type, file);
 
   if (return_code < 0) {
     __set_errno ( -1 * return_code);
