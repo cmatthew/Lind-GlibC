@@ -18,7 +18,7 @@
 
 #include <errno.h>
 #include <sys/socket.h>
-
+#include "lind_syscalls.h"
 /* Put the address of the peer connected to socket FD into *ADDR
    (which is *LEN bytes long), and its actual length into *LEN.  */
 int
@@ -27,11 +27,12 @@ getpeername (fd, addr, len)
      __SOCKADDR_ARG addr;
      socklen_t *len;
 {
-  __set_errno (ENOSYS);
-  return -1;
+
+  socklen_t t;
+  SET_ERR_AND_RETURN(lind_getpeername_rpc(fd, *len, addr, &t));
+  *len = t;
+
 }
 strong_alias (getpeername, __getpeername)
 
 
-stub_warning (getpeername)
-#include <stub-tag.h>

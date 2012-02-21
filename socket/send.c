@@ -18,7 +18,7 @@
 
 #include <errno.h>
 #include <sys/socket.h>
-
+#include "lind_syscalls.h"
 /* Send N bytes of BUF to socket FD.  Returns the number sent or -1.  */
 ssize_t
 __send (fd, buf, n, flags)
@@ -27,11 +27,10 @@ __send (fd, buf, n, flags)
      size_t n;
      int flags;
 {
-  __set_errno (ENOSYS);
-  return -1;
+
+  SET_ERR_AND_RETURN(lind_send_rpc(fd, n, flags, buf));
+
 }
 libc_hidden_def (__send)
 weak_alias (__send, send)
 
-stub_warning (send)
-#include <stub-tag.h>

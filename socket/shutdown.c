@@ -18,7 +18,7 @@
 
 #include <errno.h>
 #include <sys/socket.h>
-
+#include "lind_syscalls.h"
 /* Shut down all or part of the connection open on socket FD.
    HOW determines what to shut down:
      0 = No more receptions;
@@ -30,8 +30,7 @@ shutdown (fd, how)
      int fd;
      int how;
 {
-  __set_errno (ENOSYS);
-  return -1;
+  SET_ERR_AND_RETURN(lind_shutdown_rpc(fd,how));
 }
 
 
