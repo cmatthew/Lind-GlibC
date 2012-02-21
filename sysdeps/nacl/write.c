@@ -11,13 +11,11 @@
 
 ssize_t __write(int desc, void const *buf, size_t count)
 {
-
   int result;
   if (is_system_handle(desc)) {
     result = NACL_SYSCALL (write) (desc, buf, count);
   } else {
-    nacl_strace( combine(4, "write to ",nacl_itoa(desc), " of size ", nacl_itoa(count) ) );
-    result = lind_write_rpc(desc, buf, count); 
+    result = lind_write_rpc(desc, count, buf); 
   }
   if (result < 0) {
     errno = -result;
