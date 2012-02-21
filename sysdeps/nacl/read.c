@@ -9,11 +9,9 @@
 #include "lind_syscalls.h"
 ssize_t __libc_read (int fd, void *buf, size_t size)
 {
-  nacl_strace(concat("read ",nacl_itoa(fd)));
   int result = -1;
   if (fd >= 10) {
     result = lind_read_rpc(fd, size, buf);
-    nacl_strace(concat("read got ",nacl_itoa(result)));
   }  else {
     result = NACL_SYSCALL (read) (fd, buf, size);
   }
