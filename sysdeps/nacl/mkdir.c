@@ -39,7 +39,7 @@ __mkdir (path, mode)
   nacl_strace(concat("mkdir ",path));
 
   /* since everything is okay, forward to lind server. */
-  int return_code = lind_mkdir_rpc(path, mode);
+  int return_code = lind_mkdir_rpc(mode, path);
 
   if (return_code < 0) {
     __set_errno ( -1 * return_code);
