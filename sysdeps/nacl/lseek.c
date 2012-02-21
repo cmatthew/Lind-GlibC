@@ -23,7 +23,8 @@ off_t __lseek (int fd, off_t offset, int whence)
   }
   else{
     off_t returned_offset = 0;
-    result = lind_lseek_rpc(fd, offset, whence, &returned_offset);
+    
+    result = lind_lseek_rpc(offset, fd, whence, &returned_offset);
     if (result < 0) {
       errno = -result;
       return -1;
