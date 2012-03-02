@@ -18,6 +18,8 @@
 
 #include <errno.h>
 #include <sys/socket.h>
+#include "lind_syscalls.h"
+#include "nacl_util.h"
 
 /* Await a connection on socket FD.
    When a connection arrives, open a new socket to communicate with it,
@@ -30,11 +32,10 @@ accept (fd, addr, addr_len)
      __SOCKADDR_ARG addr;
      socklen_t *addr_len;
 {
-  __set_errno (ENOSYS);
-  return -1;
+#warning "Note: compiling accept"
+  dbg_print("calling accept");
+  socklen_t addr_out_len = 0;
+  SET_ERR_AND_RETURN(lind_accept_rpc(fd, addr_out_len));
+ 
 }
 libc_hidden_def (accept)
-
-
-stub_warning (accept)
-#include <stub-tag.h>

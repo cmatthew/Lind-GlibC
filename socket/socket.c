@@ -20,6 +20,9 @@
 #include <sys/socket.h>
 #include "lind_syscalls.h"
 #include "nacl_util.h"
+
+
+
 /* Create a new socket of type TYPE in domain DOMAIN, using
    protocol PROTOCOL.  If PROTOCOL is zero, one is chosen automatically.
    Returns a file descriptor for the new socket, or -1 for errors.  */
@@ -29,8 +32,8 @@ __socket (domain, type, protocol)
      int type;
      int protocol;
 { 
+#warning "real socket compiled"
   SET_ERR_AND_RETURN(lind_socket_rpc(domain, type, protocol));
 }
-
 
 weak_alias (__socket, socket)

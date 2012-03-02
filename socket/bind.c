@@ -29,8 +29,6 @@ __bind (fd, addr, len)
      __CONST_SOCKADDR_ARG addr;
      socklen_t len;
 {
-  nacl_strace(combine(4, "Bind ",nacl_itoa(sizeof(__CONST_SOCKADDR_ARG)), " ", nacl_itoa(sizeof(socklen_t))));
-
   SET_ERR_AND_RETURN(lind_bind_rpc(fd, len, addr));
 
 }

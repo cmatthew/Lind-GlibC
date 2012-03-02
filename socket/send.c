@@ -27,10 +27,9 @@ __send (fd, buf, n, flags)
      size_t n;
      int flags;
 {
-
   SET_ERR_AND_RETURN(lind_send_rpc(fd, n, flags, buf));
-
 }
+
 libc_hidden_def (__send)
 weak_alias (__send, send)
 

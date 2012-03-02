@@ -18,6 +18,7 @@
 
 #include <errno.h>
 #include <sys/socket.h>
+#include "lind_syscalls.h"
 
 /* Read N bytes into BUF from socket FD.
    Returns the number read or -1 for errors.  */
@@ -28,10 +29,7 @@ __recv (fd, buf, n, flags)
      size_t n;
      int flags;
 {
-  __set_errno (ENOSYS);
-  return -1;
+  SET_ERR_AND_RETURN(lind_recv_rpc(fd, n, flags, buf));
 }
 weak_alias (__recv, recv)
 
-stub_warning (recv)
-#include <stub-tag.h>
