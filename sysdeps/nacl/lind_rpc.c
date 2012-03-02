@@ -16,13 +16,15 @@
 /* if we start logging to early, we crash the system.
  So wait until the first file is opened, we are safe
 by then.  */
+
+static struct {
+  lindlock socket_lock;  /* To lock sequence number*/
+  int _lind_ready_to_log; /* Is the system ready to start logging? */
+  int sequence_number; /* Message sequence number */
+} lind = {-1, 0, -10};
+
+
 static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply, int nargs, va_list ertra_args);
-
-
-static lindlock socket_lock = -1;
-
-
-static int _lind_ready_to_log = 0;
 
 
 static const char * lind_rpc_status_messages[] = {"RPC OK", 
@@ -34,17 +36,17 @@ static const char * lind_rpc_status_messages[] = {"RPC OK",
 
 
 int get_logging_status(void) {
-  return _lind_ready_to_log;
+  return lind._lind_ready_to_log;
 }
 
 
 void set_ready_to_log(void) {
-  _lind_ready_to_log = 1;
+  lind._lind_ready_to_log = 1;
 }
 
 
 void set_no_logging(void) {
-  _lind_ready_to_log = 0;  
+  lind._lind_ready_to_log = 0;  
 }
 
 
@@ -67,7 +69,11 @@ void _lind_strace(const char* message) {
     request.format = concat(request.format, "s");
     request.call_number = NACL_sys_trace;
       
-    unsafe_nacl_rpc_syscall(&request, &reply, 0, NULL);  /* we do unsafe because we could not do much if this fails */
+    int rc = unsafe_nacl_rpc_syscall(&request, &reply, 0, NULL);  /* we do unsafe because we could not do much if this fails */
+
+    if (rc != RPC_OK) {
+      dbg_print("Warning: RPC strace failed");
+    }
   }    
 }
 
@@ -143,6 +149,7 @@ lind_rpc_status depricated_nacl_rpc_syscall(unsigned int call_number, const char
     *retval = reply.return_code;
     return rc;
   } else if (rc > RPC_OK && rc <= RPC_ARGS_ERROR) {
+    dbg_print("Warning: An RPC failed.");
     print_error(concat("RPC Failed with: ", lind_rpc_status_messages[rc]));
   } else {
     print_error("Invalid RPC return state. This should never happen!");
@@ -186,10 +193,8 @@ lind_rpc_status nacl_rpc_syscall_proxy(lind_request * request, lind_reply * repl
 */
 static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_reply * reply, int nargs, va_list extra_args) {
 
-  static unsigned int global_seq_num;
-
-  if ( socket_lock == -1) {
-	socket_lock = lindlock_init();
+  if ( lind.socket_lock == -1) {
+	lind.socket_lock = lindlock_init();
   }
   unsigned int size = 0;
   /* Construct a message such that first part is a message header,
@@ -239,10 +244,11 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   request_msg.desc_length = 0;
 
   int write_rc = 0;
-  lindlock_lock(socket_lock);
-  current_call.sequence_number = global_seq_num;
-  global_seq_num = global_seq_num + 1;
+  lindlock_lock(lind.socket_lock);
+  current_call.sequence_number = lind.sequence_number++;
+
   if ( (write_rc = imc_sendmsg (NACL_PLUGIN_ASYNC_FROM_CHILD_FD, &request_msg, 0)) < 1) {
+    dbg_print("Warning: RPC error in sendmsg.");
     return RPC_WRITE_ERROR;
   }
   
@@ -264,13 +270,15 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   reply_msg.flags = 0;
 
   if (imc_recvmsg (NACL_PLUGIN_ASYNC_TO_CHILD_FD, &reply_msg, 0 ) < 1) {
-	lindlock_unlock(socket_lock);
+    lindlock_unlock(lind.socket_lock);
+    dbg_print("Warning: RPC error in recvmsg.");
     return RPC_READ_ERROR;
   } else {
-	lindlock_unlock(socket_lock);
+	lindlock_unlock(lind.socket_lock);
   }
   if (reply->magic_number != MAGIC) {
-     return RPC_PROTOCOL_ERROR;
+    dbg_print("Warning: RPC error in recv magic number");
+    return RPC_PROTOCOL_ERROR;
   }
 
   return RPC_OK;
