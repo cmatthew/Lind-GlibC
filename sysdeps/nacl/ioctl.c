@@ -45,7 +45,7 @@ __ioctl (int fd, unsigned long int request, ...)
     }
   } else {
     /* send to lind server. For now, don't send optional args  */
-    result = lind_ioctl_rpc(fd, request);
+      result = -ENOSYS;//lind_ioctl_rpc(fd, request);
   }
     
   /* setup errno */

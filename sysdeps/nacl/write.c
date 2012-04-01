@@ -12,10 +12,11 @@
 ssize_t __write(int desc, void const *buf, size_t count)
 {
   int result;
+  nacl_strace(combine(3, "[glibc] calling write on ", nacl_itoa(desc), "\n"));
   if (is_system_handle(desc)) {
     result = NACL_SYSCALL (write) (desc, buf, count);
   } else {
-    result = lind_write_rpc(desc, count, buf); 
+      result = lind_write_rpc(desc, count, buf); 
   }
   if (result < 0) {
     errno = -result;
