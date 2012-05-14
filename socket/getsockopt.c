@@ -18,6 +18,8 @@
 
 #include <errno.h>
 #include <sys/socket.h>
+#include "lind_syscalls.h"
+#include "nacl_util.h"
 
 /* Put the current value for socket FD's option OPTNAME at protocol level LEVEL
    into OPTVAL (which is *OPTLEN bytes long), and set *OPTLEN to the value's
@@ -30,10 +32,7 @@ getsockopt (fd, level, optname, optval, optlen)
      void *optval;
      socklen_t *optlen;
 {
-  __set_errno (ENOSYS);
-  return -1;
+    SET_ERR_AND_RETURN(lind_getsockopt_rpc(fd, level, optname, *optlen, optval));
 }
 strong_alias (getsockopt, __getsockopt)
 
-stub_warning (getsockopt)
-#include <stub-tag.h>

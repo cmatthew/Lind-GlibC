@@ -36,7 +36,7 @@ __pselect (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	   const struct timespec *timeout, const sigset_t *sigmask)
 {
   struct timeval tval;
-  int retval;
+  int retval = -1;
   sigset_t savemask;
 
   /* Change nanosecond number to microseconds.  This might mean losing
@@ -54,8 +54,8 @@ __pselect (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
   /* Note the pselect() is a cancellation point.  But since we call
      select() which itself is a cancellation point we do not have
      to do anything here.  */
-  retval = __select (nfds, readfds, writefds, exceptfds,
-		     timeout != NULL ? &tval : NULL);
+  /* retval = __select (nfds, readfds, writefds, exceptfds, */
+  /*   	     timeout != NULL ? &tval : NULL); */
 
   if (sigmask != NULL)
     __sigprocmask (SIG_SETMASK, &savemask, NULL);

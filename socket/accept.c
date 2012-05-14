@@ -32,8 +32,6 @@ accept (fd, addr, addr_len)
      __SOCKADDR_ARG addr;
      socklen_t *addr_len;
 {
-#warning "Note: compiling accept"
-  dbg_print("calling accept");
   socklen_t addr_out_len = 0;
   SET_ERR_AND_RETURN(lind_accept_rpc(fd, addr_out_len));
  

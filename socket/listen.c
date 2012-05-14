@@ -29,8 +29,6 @@ __listen (fd, n)
      int fd;
      int n;
 {
-#warning "Note: compiling listen"
-  nacl_strace("calling listen");
   SET_ERR_AND_RETURN(lind_listen_rpc(fd, n));
 }
 

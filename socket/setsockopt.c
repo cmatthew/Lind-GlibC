@@ -32,8 +32,6 @@ __setsockopt (fd, level, optname, optval, optlen)
      const __ptr_t optval;
      socklen_t optlen;
 {
-#warning "Note: compiling setsockopt"
-  nacl_strace("calling setsockopt");
   SET_ERR_AND_RETURN(lind_setsockopt_rpc(fd, level, optname, optlen, optval));
 
 }

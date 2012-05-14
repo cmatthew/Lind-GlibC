@@ -12,10 +12,11 @@ void _lind_strace(const char* syscall);
 
 ssize_t __write(int desc, void const *buf, size_t count);
 
-#define dbg_print(x)   { const char * dbg_message = (x);__write(2, dbg_message, strlen(dbg_message)); }
+//  #define dbg_print(x)   { const char * dbg_message = (x);__write(2, dbg_message, strlen(dbg_message)); }
+#define dbg_print(x)    {int xyz = 0;} 
 
 
-/*   #define USE_TRACE  */
+#define USE_TRACE
 
 #ifdef USE_TRACE
 #define nacl_strace(x) _lind_strace(x)

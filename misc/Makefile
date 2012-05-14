@@ -81,7 +81,7 @@ gpl2lgpl := error.c error.h
 tests := tst-dirname tst-tsearch tst-fdset tst-efgcvt tst-mntent tst-hsearch \
 	 tst-error1 tst-pselect tst-insremque tst-mntent2
 ifeq (no,$(cross-compiling))
-tests: $(objpfx)tst-error1-mem
+tests: $(objpfx)tst-error1-memren
 endif
 
 CFLAGS-tsearch.c = $(uses-callbacks)

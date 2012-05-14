@@ -32,7 +32,6 @@ __socket (domain, type, protocol)
      int type;
      int protocol;
 { 
-#warning "real socket compiled"
   SET_ERR_AND_RETURN(lind_socket_rpc(domain, type, protocol));
 }
 

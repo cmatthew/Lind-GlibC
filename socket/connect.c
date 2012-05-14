@@ -33,12 +33,7 @@ __connect (fd, addr, len)
      __CONST_SOCKADDR_ARG addr;
      socklen_t len;
 {
-
-#warning "Note: compiling connect"
-  dbg_print("calling connect");
   SET_ERR_AND_RETURN(lind_connect_rpc(fd, len, addr));
-
-
 }
 INTDEF (__connect)
 weak_alias (__connect, connect)

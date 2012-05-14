@@ -12,6 +12,15 @@
 #include <unistd.h>
 
 
+struct select_results {
+    struct timeval used_t;
+    fd_set r;
+    fd_set w;
+    fd_set e;
+};
+
+
+
 
 /* int lind_open_rpc (const char * filename, int flags, int mode); */
 /* int lind_read_rpc(int handle, int size, void * where_to); */

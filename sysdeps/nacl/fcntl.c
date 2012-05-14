@@ -34,7 +34,6 @@ __fcntl (int fd, int cmd, ...) {
   }
 
   int result = -1; 
-  nacl_strace(">> fcntl is being called\n")
   if (is_system_handle(fd)) {
     /* Nacl did not support this, so we dont either */
     result = -ENOSYS;
