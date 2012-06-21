@@ -27,7 +27,30 @@
 #include <errno.h>
 #include <netinet/in.h>
 
+#include "strace.h"
+#include "nacl_util.h"
+#include "lind_syscalls.h"
+
 #include "ifreq.h"
+
+
+void *memset(void *s, int c, size_t n);
+void *memcpy(void *dest, const void *src, size_t n);
+
+// this should match the defintion in seattlelib/net_getifaddrs.repy
+struct repy_ifreq {
+    int flags;
+    int flags2;
+    int addr; // - this is an IPv4 address in network order byte binary format
+    int addr2;
+    int netmask; // - in network byte order binary format
+    int netmask2;
+    int broadcast;
+    int broadcast2;
+    char name1[5];
+    char name2[4];
+};
+
 
 /* Create a linked list of `struct ifaddrs' structures, one for each
    network interface on the host machine.  If successful, store the
@@ -35,121 +58,68 @@
 int
 getifaddrs (struct ifaddrs **ifap)
 {
-  /* This implementation handles only IPv4 interfaces.
-     The various ioctls below will only work on an AF_INET socket.
-     Some different mechanism entirely must be used for IPv6.  */
-  int fd = __socket (AF_INET, SOCK_DGRAM, 0);
-  struct ifreq *ifreqs;
-  int nifs;
+    struct repy_ifreq r;
+    struct ifaddrs * storage1 = NULL;
+    struct ifaddrs * storage2 = NULL;
+    memset(&r, 0, sizeof(struct repy_ifreq));
+    int result = 0;
 
-  if (fd < 0)
-    return -1;
+    result = lind_getifaddrs_rpc(sizeof(struct repy_ifreq), &r);
 
-  __ifreq (&ifreqs, &nifs, fd);
-  if (ifreqs == NULL)		/* XXX doesn't distinguish error vs none */
-    {
-      __close (fd);
-      return -1;
+    if ( result != 0 ) {
+        return -1;
     }
 
-  /* Now we have the list of interfaces and each one's address.
-     Put it into the expected format and fill in the remaining details.  */
-  if (nifs == 0)
-    *ifap = NULL;
-  else
-    {
-      struct
-      {
-	struct ifaddrs ia;
-	struct sockaddr addr, netmask, broadaddr;
-	char name[IF_NAMESIZE];
-      } *storage;
-      struct ifreq *ifr;
-      int i;
+    // make two ifaddrs structs
+    storage1 = malloc(sizeof(struct ifaddrs)); 
+    storage2 = malloc(sizeof(struct ifaddrs));
 
-      storage = malloc (nifs * sizeof storage[0]);
-      if (storage == NULL)
-	{
-	  __close (fd);
-	  __if_freereq (ifreqs, nifs);
-	  return -1;
-	}
-
-      i = 0;
-      ifr = ifreqs;
-      do
-	{
-	  /* Fill in pointers to the storage we've already allocated.  */
-	  storage[i].ia.ifa_next = &storage[i + 1].ia;
-	  storage[i].ia.ifa_addr = &storage[i].addr;
-
-	  /* Now copy the information we already have from SIOCGIFCONF.  */
-	  storage[i].ia.ifa_name = strncpy (storage[i].name, ifr->ifr_name,
-					    sizeof storage[i].name);
-	  storage[i].addr = ifr->ifr_addr;
-
-	  /* The SIOCGIFCONF call filled in only the name and address.
-	     Now we must also ask for the other information we need.  */
-
-	  if (__ioctl (fd, SIOCGIFFLAGS, ifr) < 0)
-	    break;
-	  storage[i].ia.ifa_flags = ifr->ifr_flags;
-
-	  ifr->ifr_addr = storage[i].addr;
-
-	  if (__ioctl (fd, SIOCGIFNETMASK, ifr) < 0)
-	    storage[i].ia.ifa_netmask = NULL;
-	  else
-	    {
-	      storage[i].ia.ifa_netmask = &storage[i].netmask;
-	      storage[i].netmask = ifr->ifr_netmask;
-	    }
-
-	  if (ifr->ifr_flags & IFF_BROADCAST)
-	    {
-	      ifr->ifr_addr = storage[i].addr;
-	      if (__ioctl (fd, SIOCGIFBRDADDR, ifr) < 0)
-		storage[i].ia.ifa_broadaddr = NULL;
-	      {
-		storage[i].ia.ifa_broadaddr = &storage[i].broadaddr;
-		storage[i].broadaddr = ifr->ifr_broadaddr;
-	      }
-	    }
-	  else if (ifr->ifr_flags & IFF_POINTOPOINT)
-	    {
-	      ifr->ifr_addr = storage[i].addr;
-	      if (__ioctl (fd, SIOCGIFDSTADDR, ifr) < 0)
-		storage[i].ia.ifa_broadaddr = NULL;
-	      else
-		{
-		  storage[i].ia.ifa_broadaddr = &storage[i].broadaddr;
-		  storage[i].broadaddr = ifr->ifr_dstaddr;
-		}
-	    }
-	  else
-	    storage[i].ia.ifa_broadaddr = NULL;
-
-	  storage[i].ia.ifa_data = NULL; /* Nothing here for now.  */
-
-	  ifr = __if_nextreq (ifr);
-	} while (++i < nifs);
-      if (i < nifs)		/* Broke out early on error.  */
-	{
-	  __close (fd);
-	  free (storage);
-	  __if_freereq (ifreqs, nifs);
-	  return -1;
-	}
-
-      storage[i - 1].ia.ifa_next = NULL;
-
-      *ifap = &storage[0].ia;
-
-      __close (fd);
-      __if_freereq (ifreqs, nifs);
+    if (storage2 == NULL || storage1 == NULL) {
+        return -1;
     }
 
-  return 0;
+    memset(storage1, 0, sizeof(struct ifaddrs));
+    memset(storage2, 0, sizeof(struct ifaddrs));
+    storage1->ifa_next = storage2;
+
+    // set up names
+    storage1->ifa_name = strdup(r.name1);
+    storage2->ifa_name = strdup(r.name2 ); 
+
+    // add in IP addresses
+    storage1->ifa_addr = malloc(sizeof(struct sockaddr));
+    storage1->ifa_addr->sa_family = AF_INET;
+    struct sockaddr_in * s4 = (struct sockaddr_in *)(storage1->ifa_addr);
+    memcpy(&(s4->sin_addr), &(r.addr),sizeof(int));
+
+    storage2->ifa_addr = malloc(sizeof(struct sockaddr));
+    storage2->ifa_addr->sa_family = AF_INET;
+    s4 = (struct sockaddr_in *)(storage2->ifa_addr);
+    memcpy(&(s4->sin_addr), &(r.addr2),sizeof(int));
+
+    // set the adapters to up
+    storage1->ifa_flags = storage1->ifa_flags | IFF_UP;
+    storage2->ifa_flags = storage2->ifa_flags | IFF_UP;
+
+    // set loopback on one
+    storage2->ifa_flags = storage2->ifa_flags | IFF_LOOPBACK;
+
+    // set netmask
+    storage1->ifa_netmask = malloc(sizeof(struct sockaddr));
+    storage1->ifa_netmask->sa_family = AF_INET;
+    s4 = (struct sockaddr_in *)(storage1->ifa_netmask);
+    memcpy(&(s4->sin_addr), &(r.netmask),sizeof(int));
+
+    storage2->ifa_netmask = malloc(sizeof(struct sockaddr));
+    storage2->ifa_netmask->sa_family = AF_INET;
+    s4 = (struct sockaddr_in *)(storage2->ifa_netmask);
+    memcpy(&(s4->sin_addr), &(r.netmask2),sizeof(int));
+
+    
+   *ifap = storage1;
+    return 0;
+
+
 }
 #ifndef getifaddrs
 libc_hidden_def (getifaddrs)
@@ -158,6 +128,15 @@ libc_hidden_def (getifaddrs)
 void
 freeifaddrs (struct ifaddrs *ifa)
 {
-  free (ifa);
+    free(ifa->ifa_next->ifa_name);
+    free(ifa->ifa_next->ifa_addr);
+    free(ifa->ifa_next->ifa_netmask);
+
+    free(ifa->ifa_name);
+    free(ifa->ifa_addr);
+    free(ifa->ifa_netmask);
+
+    free(ifa->ifa_next);
+    free (ifa);
 }
 libc_hidden_def (freeifaddrs)
