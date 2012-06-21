@@ -248,7 +248,7 @@ static lind_rpc_status unsafe_nacl_rpc_syscall(lind_request * request, lind_repl
   current_call.sequence_number = lind.sequence_number++;
 
   if ( (write_rc = imc_sendmsg (NACL_PLUGIN_ASYNC_FROM_CHILD_FD, &request_msg, 0)) < 1) {
-    dbg_print("Warning: RPC error in sendmsg.");
+    dbg_print("Warning: RPC error in imc_sendmesg.");
     return RPC_WRITE_ERROR;
   }
   
