@@ -47,23 +47,23 @@ recv (int __fd, void *__buf, size_t __n, int __flags)
 
 extern ssize_t __recvfrom_chk (int __fd, void *__restrict __buf, size_t __n,
 			       size_t __buflen, int __flags,
-			       __SOCKADDR_ARG __addr,
-			       socklen_t *__restrict __addr_len);
+			       struct sockaddr * __addr,
+			       socklen_t * __addr_len);
 extern ssize_t __REDIRECT (__recvfrom_alias,
 			   (int __fd, void *__restrict __buf, size_t __n,
-			    int __flags, __SOCKADDR_ARG __addr,
-			    socklen_t *__restrict __addr_len), recvfrom);
+			    int __flags, struct sockaddr * __addr,
+			    socklen_t * __addr_len), recvfrom);
 extern ssize_t __REDIRECT (__recvfrom_chk_warn,
 			   (int __fd, void *__restrict __buf, size_t __n,
 			    size_t __buflen, int __flags,
-			    __SOCKADDR_ARG __addr,
-			    socklen_t *__restrict __addr_len), __recvfrom_chk)
+			    struct sockaddr * __addr,
+			    socklen_t * __addr_len), __recvfrom_chk)
      __warnattr ("recvfrom called with bigger length than size of "
 		 "destination buffer");
 
 __extern_always_inline ssize_t
 recvfrom (int __fd, void *__restrict __buf, size_t __n, int __flags,
-	  __SOCKADDR_ARG __addr, socklen_t *__restrict __addr_len)
+	 struct sockaddr * __addr, socklen_t * __addr_len)
 {
   if (__bos0 (__buf) != (size_t) -1)
     {
