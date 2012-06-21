@@ -21,6 +21,9 @@
 #ifndef	_SYS_SOCKET_H
 #define	_SYS_SOCKET_H	1
 
+# define __restrict	/* Ignore */
+
+
 #include <features.h>
 
 __BEGIN_DECLS
@@ -61,6 +64,9 @@ enum
 #define SHUT_RDWR	SHUT_RDWR
 };
 
+/* # define __restrict	/\* Ignore *\/ */
+
+
 /* This is the type we use for generic socket address arguments.
 
    With GCC 2.7 and later, the funky union causes redeclarations or
@@ -68,7 +74,7 @@ enum
    G++ 2.7 does not support transparent unions so there we want the
    old-style declaration, too.  */
 #if defined __cplusplus || !__GNUC_PREREQ (2, 7) || !defined __USE_GNU
-# define __SOCKADDR_ARG		struct sockaddr *__restrict
+# define __SOCKADDR_ARG		struct sockaddr *
 # define __CONST_SOCKADDR_ARG	__const struct sockaddr *
 #else
 /* Add more `struct sockaddr_AF' types here as necessary.
@@ -164,8 +170,8 @@ extern ssize_t sendto (int __fd, __const void *__buf, size_t __n,
    This function is a cancellation point and therefore not marked with
    __THROW.  */
 extern ssize_t recvfrom (int __fd, void *__restrict __buf, size_t __n,
-			 int __flags, __SOCKADDR_ARG __addr,
-			 socklen_t *__restrict __addr_len);
+			 int __flags, struct sockaddr * __addr,
+			 socklen_t * __addr_len);
 
 
 /* Send a message described MESSAGE on socket FD.
