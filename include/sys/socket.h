@@ -46,8 +46,8 @@ extern ssize_t __libc_sendto (int __fd, __const void *__buf, size_t __n,
    the sender, and store the actual size of the address in *ADDR_LEN.
    Returns the number of bytes read or -1 for errors.  */
 extern ssize_t __libc_recvfrom (int __fd, void *__restrict __buf, size_t __n,
-				int __flags, __SOCKADDR_ARG __addr,
-				socklen_t *__restrict __addr_len);
+				int __flags, struct sockaddr * __addr,
+				socklen_t * __addr_len);
 
 /* Open a connection on socket FD to peer at ADDR (which LEN bytes long).
    For connectionless socket types, just set the default address to send to
@@ -81,8 +81,8 @@ extern ssize_t __sendto (int __fd, __const void *__buf, size_t __n,
    the sender, and store the actual size of the address in *ADDR_LEN.
    Returns the number of bytes read or -1 for errors.  */
 extern ssize_t __recvfrom (int __fd, void *__restrict __buf, size_t __n,
-			   int __flags, __SOCKADDR_ARG __addr,
-			   socklen_t *__restrict __addr_len) attribute_hidden;
+			   int __flags, struct sockaddr * __addr,
+			   socklen_t * __addr_len) attribute_hidden;
 
 /* Send a message described MESSAGE on socket FD.
    Returns the number of bytes sent, or -1 for errors.  */
