@@ -19,6 +19,25 @@
 
 #include "ifreq.h"
 #include <kernel-features.h>
+#include "strace.h"
+#include "nacl_util.h"
+
+
+void *memset(void *s, int c, size_t n);
+void *memcpy(void *dest, const void *src, size_t n);
+
+struct repy_ifreq {
+    int flags;
+    int flags2;
+    int addr; // - this is an IPv4 address in network order byte binary format
+    int addr2;
+    int netmask; // - in network byte order binary format
+    int netmask2;
+    int broadcast;
+    int broadcast2;
+    char name[4];
+    char name2[3];
+};
 
 /* Variable to signal whether SIOCGIFCONF is not available.  */
 #if __ASSUME_SIOCGIFNAME == 0 || 1
@@ -27,10 +46,12 @@ static int old_siocgifconf;
 # define old_siocgifconf 0
 #endif
 
+#define PREFIX "sysdeps/linux/ifreq: "
 
 void
 __ifreq (struct ifreq **ifreqs, int *num_ifs, int sockfd)
 {
+
   int fd = sockfd;
   struct ifconf ifc;
   int rq_len;
@@ -40,7 +61,7 @@ __ifreq (struct ifreq **ifreqs, int *num_ifs, int sockfd)
   if (fd < 0)
     fd = __opensock ();
   if (fd < 0)
-    {
+      {
       *num_ifs = 0;
       *ifreqs = NULL;
       return;
@@ -50,52 +71,32 @@ __ifreq (struct ifreq **ifreqs, int *num_ifs, int sockfd)
 
   /* We may be able to get the needed buffer size directly, rather than
      guessing.  */
-  if (! old_siocgifconf)
-    {
-      ifc.ifc_buf = NULL;
-      ifc.ifc_len = 0;
-      if (__ioctl (fd, SIOCGIFCONF, &ifc) < 0 || ifc.ifc_len == 0)
-	{
-# if __ASSUME_SIOCGIFNAME == 0
-	  old_siocgifconf = 1;
-# endif
-	  rq_len = RQ_IFS * sizeof (struct ifreq);
-	}
-      else
-	rq_len = ifc.ifc_len;
-    }
-  else
-    rq_len = RQ_IFS * sizeof (struct ifreq);
+  ifc.ifc_buf = NULL;
+  ifc.ifc_len = 39;
+  rq_len = ifc.ifc_len;
 
   /* Read all the interfaces out of the kernel.  */
-  while (1)
-    {
-      ifc.ifc_len = rq_len;
-      void *newp = realloc (ifc.ifc_buf, ifc.ifc_len);
-      if (newp == NULL
-	  || (ifc.ifc_buf = newp, __ioctl (fd, SIOCGIFCONF, &ifc)) < 0)
-	{
-	  free (ifc.ifc_buf);
+  void * newp =  realloc (ifc.ifc_buf, sizeof(struct repy_ifreq) * 2 );
 
-	  if (fd != sockfd)
-	    __close (fd);
+  if (newp == NULL || (ifc.ifc_buf = newp, __ioctl (fd, SIOCGIFCONF, &ifc)) < 0)
+      {
+          free (ifc.ifc_buf);
+          
+          if (fd != sockfd)
+              __close (fd);
+          
+          *num_ifs = 0;
+          *ifreqs = NULL;
+          return;
+      }
 
-	  *num_ifs = 0;
-	  *ifreqs = NULL;
-	  return;
-	}
+  struct ifreq * if1 = malloc(sizeof(struct ifreq) * 2);
+  memset((void*)if1, 0, sizeof(struct ifreq) * 2);
 
-      if (!old_siocgifconf || ifc.ifc_len < rq_len)
-	break;
+  *ifreqs = if1;
+  memcpy( if1->ifr_name, "eth0", strlen("eth0") + 1);
+  *num_ifs = 1;
 
-      rq_len *= 2;
-    }
+  // Now put it all back together again.
 
-  nifs = ifc.ifc_len / sizeof (struct ifreq);
-
-  if (fd != sockfd)
-    __close (fd);
-
-  *num_ifs = nifs;
-  *ifreqs = realloc (ifc.ifc_buf, nifs * sizeof (struct ifreq));
 }

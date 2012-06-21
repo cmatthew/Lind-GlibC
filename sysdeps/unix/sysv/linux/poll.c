@@ -20,86 +20,22 @@
 
 #include <errno.h>
 #include <sys/poll.h>
+#include "strace.h"
+#include "nacl_util.h"
+#include "lind_syscalls.h"
 
-#include <sysdep-cancel.h>
-#include <sys/syscall.h>
-#include <bp-checks.h>
-
-#include <kernel-features.h>
-
-#if defined __NR_poll || __ASSUME_POLL_SYSCALL > 0
-
-# if __ASSUME_POLL_SYSCALL == 0
-static int __emulate_poll (struct pollfd *fds, nfds_t nfds,
-			   int timeout) internal_function;
-# endif
-
-
-# if __ASSUME_POLL_SYSCALL == 0
-/* For loser kernels.  */
-static int
-loser_poll (struct pollfd *fds, nfds_t nfds, int timeout)
-{
-  static int must_emulate;
-
-  if (!must_emulate)
-    {
-      int errno_saved = errno;
-      int retval = INLINE_SYSCALL (poll, 3, CHECK_N (fds, nfds), nfds,
-				   timeout);
-
-      if (retval >= 0 || errno != ENOSYS)
-	return retval;
-
-      __set_errno (errno_saved);
-      must_emulate = 1;
-    }
-
-  return __emulate_poll (fds, nfds, timeout);
-}
-# endif
-
-
-/* The real implementation.  */
 int
 __poll (fds, nfds, timeout)
      struct pollfd *fds;
      nfds_t nfds;
      int timeout;
 {
-# if __ASSUME_POLL_SYSCALL == 0
-  if (SINGLE_THREAD_P)
-    return loser_poll (CHECK_N (fds, nfds), nfds, timeout);
 
-  int oldtype = LIBC_CANCEL_ASYNC ();
+    SET_ERR_AND_RETURN( lind_poll_rpc(nfds, timeout, fds, fds));
 
-  int result = loser_poll (CHECK_N (fds, nfds), nfds, timeout);
 
-   LIBC_CANCEL_RESET (oldtype);
-
-  return result;
-# else
-  if (SINGLE_THREAD_P)
-    return INLINE_SYSCALL (poll, 3, CHECK_N (fds, nfds), nfds, timeout);
-
-  int oldtype = LIBC_CANCEL_ASYNC ();
-
-  int result = INLINE_SYSCALL (poll, 3, CHECK_N (fds, nfds), nfds, timeout);
-
-   LIBC_CANCEL_RESET (oldtype);
-
-  return result;
-# endif
 }
 libc_hidden_def (__poll)
 weak_alias (__poll, poll)
 strong_alias (__poll, __libc_poll)
 
-/* Get the emulation code.  */
-# define __poll(fds, nfds, timeout) \
-  static internal_function __emulate_poll (fds, nfds, timeout)
-#endif
-
-#if __ASSUME_POLL_SYSCALL == 0
-# include <sysdeps/unix/bsd/poll.c>
-#endif

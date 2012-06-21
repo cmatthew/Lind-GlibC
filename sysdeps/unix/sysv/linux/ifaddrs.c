@@ -36,6 +36,8 @@
 #include <kernel-features.h>
 
 #include "netlinkaccess.h"
+#include "strace.h"
+#include "nacl_util.h"
 
 
 /* We don't know if we have NETLINK support compiled in in our
@@ -347,8 +349,9 @@ getifaddrs (struct ifaddrs **ifap)
     }
 
 #if __ASSUME_NETLINK_SUPPORT == 0
-  if (__no_netlink_support)
+  if (__no_netlink_support) {
     return fallback_getifaddrs (ifap);
+  }
 #endif
 
   /* Tell the kernel that we wish to get a list of all
