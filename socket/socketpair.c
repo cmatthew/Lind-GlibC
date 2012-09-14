@@ -18,6 +18,8 @@
 
 #include <errno.h>
 #include <sys/socket.h>
+#include "lind_syscalls.h"
+#include "nacl_util.h"
 
 /* Create two new sockets, of type TYPE in domain DOMAIN and using
    protocol PROTOCOL, which are connected to each other, and put file
@@ -30,8 +32,8 @@ socketpair (domain, type, protocol, fds)
      int protocol;
      int fds[2];
 {
-  __set_errno (ENOSYS);
-  return -1;
+
+    SET_ERR_AND_RETURN(lind_socketpair_rpc(domain, type, protocol, (int*)&(fds[0])));
 }
 
 
