@@ -33,10 +33,8 @@ __connect (fd, addr, len)
      __CONST_SOCKADDR_ARG addr;
      socklen_t len;
 {
-  SET_ERR_AND_RETURN(lind_connect_rpc(fd, len, addr));
+    const struct sockaddr * s = addr.__sockaddr__;
+    SET_ERR_AND_RETURN(lind_connect_rpc(fd, len, s));
 }
 INTDEF (__connect)
 weak_alias (__connect, connect)
-
-stub_warning (connect)
-#include <stub-tag.h>
