@@ -29,7 +29,8 @@ __bind (fd, addr, len)
      __CONST_SOCKADDR_ARG addr;
      socklen_t len;
 {
-  SET_ERR_AND_RETURN(lind_bind_rpc(fd, len, addr));
+    const struct sockaddr * s = addr.__sockaddr__;
+    SET_ERR_AND_RETURN(lind_bind_rpc(fd, len, s));
 
 }
 
