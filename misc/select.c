@@ -39,66 +39,32 @@ __select (nfds, readfds, writefds, exceptfds, timeout)
      fd_set *exceptfds;
      struct timeval *timeout;
 {
-    __set_errno (ENOSYS);
-    return -1;
+
+    
+    /* __set_errno (ENOSYS); */
+    /* return -1; */
     /* this works, but breaks wget. */
-    /* struct timeval t; */
+    struct select_results s;
 
-    /* struct select_results s; */
+    memset(&s, 0, sizeof(struct select_results));
 
-    /* memset(&s, 0, sizeof(struct select_results)); */
+    int rc = -1;
+    dbp("in glibc: calling __select."); 
+    rc = lind_select_rpc(nfds, readfds, writefds, exceptfds, timeout, &s);
 
-    /* t.tv_sec = 0; */
-    /* t.tv_usec = 4000000;  // not a naturally occuring value (always between 1-1,000,000) so use it as a sentenal for not set */
-    /* int rc = -1; */
-    /* int i; */
-    /* void * nothing = NULL; */
-
-    /* int have_read = -1; */
-
-    /* if (readfds==NULL) { */
-    /*     have_read = 1; */
-    /*     readfds = (fd_set*) &nothing; */
-    /* } else { */
-    /*     have_read = sizeof(fd_set); */
-    /* } */
-
-
-    /* int have_write = -1; */
-    /* if (writefds==NULL) { */
-    /*     have_write = 1; */
-    /*     writefds = (fd_set *) &nothing; */
-    /* } else { */
-    /*     have_write = sizeof(fd_set); */
-    /* } */
-
-    /* int have_except = -1; */
-    /* if (exceptfds==NULL) { */
-    /*     have_except = 1; */
-    /*     exceptfds=(fd_set*) &nothing; */
-    /* } else { */
-    /*     have_except = sizeof(fd_set); */
-    /* } */
-
-    /* if (timeout == NULL) { */
-    /*     timeout = &t; */
-    /* } */
-    /* rc = lind_select_rpc(nfds, have_read, have_write, have_except,  */
-    /*                      readfds, writefds, exceptfds, timeout, &s);  */
-
-    /* if (readfds != 1) {  */
-    /*     memcpy(&(s.r), readfds, sizeof(fd_set)); */
-    /*  } */
-    /* if (writefds != 1) {  */
-    /*     memcpy(&(s.w), writefds, sizeof(fd_set)); */
-    /*  } */
-    /* if (exceptfds != 1) {  */
-    /*     memcpy(&(s.e), exceptfds, sizeof(fd_set)); */
-    /*  } */
-    
-    /* memcpy(&(s.used_t), timeout, sizeof(struct timeval)); */
-    
-    /* return rc; */
+    if (readfds != NULL) {
+        memcpy(readfds, &(s.r), sizeof(fd_set));
+     }
+    if (writefds != NULL) {
+        memcpy(writefds, &(s.w), sizeof(fd_set));
+     }
+    if (exceptfds != NULL) {
+        memcpy(exceptfds, &(s.e), sizeof(fd_set));
+     }
+    if (timeout != NULL) {
+        memcpy(timeout, &(s.used_t), sizeof(struct timeval));
+    }
+    return rc;
 }
 
 libc_hidden_def (__select)
